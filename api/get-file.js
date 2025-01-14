@@ -2,7 +2,7 @@ import { Magic } from "@magic-sdk/admin";
 
 export default async function handler(req, res) {
   // Configuração de CORS
-  res.setHeader("Access-Control-Allow-Origin", "https://quiet-apartment-flat.on.fleek.app"); // Domínio do Fleek
+  res.setHeader("Access-Control-Allow-Origin", "https://quiet-apartment-flat.on.fleek.app"); // Permitir apenas o domínio do Fleek
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
@@ -13,7 +13,8 @@ export default async function handler(req, res) {
 
   try {
     // 1. Validar o corpo da requisição
-    if (!req.body || !req.body.token || !req.body.fileName) {
+    if (!req.body || typeof req.body !== "object" || !req.body.token || !req.body.fileName) {
+      console.error("Requisição inválida:", req.body); // Log para depuração
       return res.status(400).json({ success: false, error: "Requisição inválida. Faltando dados." });
     }
 
@@ -21,11 +22,16 @@ export default async function handler(req, res) {
     const { token, fileName } = req.body;
 
     // 3. Inicializar o Magic Admin SDK
+    if (!process.env.MAGIC_SECRET_KEY) {
+      console.error("MAGIC_SECRET_KEY não configurado.");
+      return res.status(500).json({ success: false, error: "Configuração interna faltando (MAGIC_SECRET_KEY)." });
+    }
     const magic = new Magic(process.env.MAGIC_SECRET_KEY);
 
     // 4. Validar o token e obter os metadados do usuário
     const metadata = await magic.users.getMetadataByToken(token);
     if (!metadata || !metadata.email) {
+      console.error("Token inválido ou metadados ausentes:", metadata); // Log para depuração
       return res.status(401).json({ success: false, error: "Token inválido ou expirado." });
     }
 
@@ -40,10 +46,15 @@ export default async function handler(req, res) {
       // Adicione outros e-mails permitidos aqui
     ];
     if (!ndaList.includes(userEmail)) {
+      console.warn(`Acesso negado para: ${userEmail}`); // Log para auditoria
       return res.status(403).json({ success: false, error: "Acesso negado. E-mail não está na NDA." });
     }
 
     // 7. Montar o link do arquivo no Fleek
+    if (!fileName || typeof fileName !== "string") {
+      console.error("Nome do arquivo inválido:", fileName);
+      return res.status(400).json({ success: false, error: "Nome do arquivo inválido." });
+    }
     const ipfsHash = "bafkreihnbx52e6ubbibtx4b3psmgr4cor5hhrtbafrewjp2z2xfvuxjpfy"; // Substitua pelo seu hash IPFS correto
     const fileUrl = `https://ipfs.fleek.co/ipfs/${ipfsHash}/${fileName}`;
 
