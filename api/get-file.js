@@ -1,24 +1,12 @@
 import { Magic } from "@magic-sdk/admin";
 
 export default async function handler(req, res) {
-  // Lista de origens permitidas
-  const allowedOrigins = [
-    "https://quiet-apartment-flat.on.fleek.app", // Domínio do Fleek
-    "https://outro-dominio-que-voce-usa.com" // Adicione mais origens, se necessário
-  ];
-
-  // Pegar o domínio de origem da requisição
-  const origin = req.headers.origin;
-
-  // Configuração de CORS dinâmica
-  if (allowedOrigins.includes(origin)) {
-    res.setHeader("Access-Control-Allow-Origin", origin);
-  }
-
+  // Permitir todas as origens (solução temporária)
+  res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Lidar com requisições preflight (OPTIONS)
+  // Responder a requisições preflight (OPTIONS)
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -58,13 +46,13 @@ export default async function handler(req, res) {
     const ipfsHash = "bafkreihnbx52e6ubbibtx4b3psmgr4cor5hhrtbafrewjp2z2xfvuxjpfy"; // Substitua pelo seu hash IPFS correto
     const fileUrl = `https://ipfs.fleek.co/ipfs/${ipfsHash}/${fileName}`;
 
-    // 8. (Opcional) Logar o acesso para auditoria
+    // 8. Logar o acesso para auditoria (opcional)
     console.log(`Acesso permitido: ${userEmail} -> ${fileName}`);
 
     // 9. Retornar o link do arquivo ao front-end
     return res.status(200).json({ success: true, fileUrl });
   } catch (err) {
-    console.error("Erro no backend:", err); // Loga qualquer erro inesperado para depuração
+    console.error("Erro no backend:", err);
     return res.status(500).json({ success: false, error: "Erro interno no servidor." });
   }
 }
