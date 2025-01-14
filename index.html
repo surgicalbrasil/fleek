@@ -64,7 +64,7 @@
   <div id="header">
     <input type="email" id="user-email" placeholder="Digite seu e-mail" />
     <button id="login-button">Fazer Login</button>
-    <button id="acessar-arquivo">Ver Documento Secreto</button>
+    <button id="acessar-arquivo">Ver Documento</button>
   </div>
 
   <!-- Visualizador de PDF -->
@@ -84,14 +84,14 @@
     document.getElementById('login-button').onclick = async function() {
       const email = document.getElementById('user-email').value.trim();
       if (!authorizedEmails.includes(email)) {
-        alert("Seu e-mail não está autorizado. Entre em contato com o administrador.");
+        alert("E-mail não autorizado para acesso. Assine o NDA para continuar.");
         return;
       }
 
       try {
         // Magic envia um e-mail com link de login
         await magic.auth.loginWithMagicLink({ email });
-        alert("Cheque seu e-mail para clicar no link mágico!");
+        alert("E-mail autorizado!");
       } catch (error) {
         console.error("Erro ao enviar link mágico:", error);
         alert("Erro ao enviar link mágico: " + error.message);
@@ -124,7 +124,7 @@
       }
     }
 
-    // Ao clicar no botão "Ver Documento Secreto"
+    // Ao clicar no botão "Ver Documento"
     document.getElementById('acessar-arquivo').onclick = async function() {
       try {
         // 1. Obter o token Magic.Link
