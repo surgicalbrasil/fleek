@@ -1,74 +1,56 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Meu Site com Magic.Link</title>
-</head>
-<body>
-  <h1>Bem-vindo ao meu site!</h1>
+<script>
+  // Inicializa o Magic.Link com sua Publishable Key
+  const magic = new Magic("pk_live_20134EF9B8F26232"); // Substitua pela sua Publishable Key
 
-  <!-- Campo para inserir e-mail e um botão de Login -->
-  <input type="email" id="user-email" placeholder="Digite seu e-mail" />
-  <button id="login-button">Fazer Login</button>
+  // Ao clicar no botão "Fazer Login"
+  document.getElementById('login-button').onclick = async function() {
+    const email = document.getElementById('user-email').value;
+    try {
+      // Magic envia um e-mail com link de login
+      await magic.auth.loginWithMagicLink({ email });
+      alert("Cheque seu e-mail para clicar no link mágico!");
+    } catch (error) {
+      console.error("Erro ao enviar link mágico:", error);
+      alert("Erro ao enviar link mágico: " + error.message);
+    }
+  };
 
-  <!-- Botão para acessar o arquivo (pode ser PDF, imagem etc.) -->
-  <button id="acessar-arquivo" style="margin-top:20px;">Ver Documento Secreto</button>
+  // Ao clicar no botão "Ver Documento Secreto"
+  document.getElementById('acessar-arquivo').onclick = async function() {
+    try {
+      // 1. Obter o token Magic.Link
+      const token = await magic.user.getIdToken();
+      console.log("Token gerado:", token); // Log do token gerado
 
-  <!-- Magic.Link Script via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
-  
-  <script>
-    // Inicializa o Magic.Link com sua Publishable Key
-    const magic = new Magic("pk_live_20134EF9B8F26232"); // Substitua pela sua Publishable Key
+      // 2. Nome do arquivo solicitado
+      const fileName = "Paper.pdf";
+      console.log("Nome do arquivo:", fileName); // Log do nome do arquivo
 
-    // Ao clicar no botão "Fazer Login"
-    document.getElementById('login-button').onclick = async function() {
-      const email = document.getElementById('user-email').value;
-      try {
-        // Magic envia um e-mail com link de login
-        await magic.auth.loginWithMagicLink({ email });
-        alert("Cheque seu e-mail para clicar no link mágico!");
-      } catch (error) {
-        console.error("Erro ao enviar link mágico:", error);
-        alert("Erro ao enviar link mágico: " + error.message);
+      // 3. Fazer requisição ao backend
+      const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token, fileName })
+      });
+
+      // 4. Verificar a resposta
+      if (!response.ok) {
+        throw new Error("Erro ao acessar o backend: " + response.statusText);
       }
-    };
 
-    // Ao clicar no botão "Ver Documento Secreto"
-    document.getElementById('acessar-arquivo').onclick = async function() {
-      try {
-        // 1. Obter o token Magic.Link
-        const token = await magic.user.getIdToken();
-        console.log("Token gerado:", token); // Log do token gerado
+      // 5. Converter a resposta em Blob
+      const pdfBlob = await response.blob();
+      console.log("Arquivo recebido como Blob");
 
-        // 2. Nome do arquivo solicitado
-        const fileName = "Paper.pdf";
-        console.log("Nome do arquivo:", fileName); // Log do nome do arquivo
+      // 6. Criar uma URL temporária para exibir o PDF
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+      console.log("URL do PDF gerada:", pdfUrl);
 
-        // 3. Fazer requisição ao backend
-        const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, fileName })
-        });
-
-        const result = await response.json();
-
-        console.log("Resposta do backend:", result); // Log da resposta do backend
-
-        // 4. Verificar a resposta do backend
-        if (result.success) {
-          console.log("URL do arquivo:", result.fileUrl);
-          window.location.href = result.fileUrl; // Redireciona para o arquivo
-        } else {
-          console.error("Erro no backend:", result.error);
-          alert("Acesso negado ou erro: " + result.error);
-        }
-      } catch (err) {
-        console.error("Erro na requisição:", err.message); // Log do erro
-        alert("Ocorreu um erro: " + err.message);
-      }
-    };
-  </script>
-</body>
-</html>
+      // 7. Abrir o PDF em uma nova aba
+      window.open(pdfUrl, "_blank");
+    } catch (err) {
+      console.error("Erro na requisição:", err.message); // Log do erro
+      alert("Ocorreu um erro: " + err.message);
+    }
+  };
+</script>
