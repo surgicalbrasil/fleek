@@ -28,7 +28,7 @@ export default async function handler(req, res) {
       return res.status(403).json({ success: false, error: "Acesso negado." });
     }
 
-    // Novo link para o arquivo criptografado no IPFS
+    // Link para o arquivo criptografado no IPFS
     const encryptedFileUrl = "https://bafkreifax2ynmga3u5nbmh6ha2kvldh7gukopifulovh2ueaxcgajhhs7i.ipfs.flk-ipfs.xyz";
 
     // Buscar o arquivo criptografado no IPFS
@@ -52,7 +52,7 @@ export default async function handler(req, res) {
     // Enviar o arquivo descriptografado para o cliente
     return res.end(decryptedData);
   } catch (err) {
-    console.error(err);
+    console.error("Erro no backend:", err);
     return res.status(500).json({ success: false, error: "Erro interno no servidor." });
   }
 }
