@@ -13,22 +13,24 @@ export default async function handler(req, res) {
 
   try {
     const { token } = req.body;
+    if (!token) {
+      return res.status(400).json({ success: false, error: "Token ausente." });
+    }
 
     // Validar token Magic.Link
     const magic = new Magic(process.env.MAGIC_SECRET_KEY);
     const metadata = await magic.users.getMetadataByToken(token);
     if (!metadata || !metadata.email) {
-      return res.status(401).json({ success: false, error: "Token inválido." });
+      return res.status(401).json({ success: false, error: "Token inválido ou expirado." });
     }
 
-    // E-mail do usuário autorizado
     const userEmail = metadata.email;
     const authorizedEmails = ["vitorfelixyz@gmail.com"];
     if (!authorizedEmails.includes(userEmail)) {
       return res.status(403).json({ success: false, error: "Acesso negado." });
     }
 
-    // Link para o arquivo criptografado no IPFS
+    // Link para o arquivo criptografado
     const encryptedFileUrl = "https://bafkreifax2ynmga3u5nbmh6ha2kvldh7gukopifulovh2ueaxcgajhhs7i.ipfs.flk-ipfs.xyz";
 
     // Buscar o arquivo criptografado no IPFS
@@ -45,14 +47,15 @@ export default async function handler(req, res) {
     const decipher = crypto.createDecipheriv("aes-256-cbc", ENCRYPTION_KEY, IV);
     const decryptedData = Buffer.concat([decipher.update(encryptedData), decipher.final()]);
 
-    // Configurar cabeçalhos para exibição inline
+    // Configurar cabeçalhos para envio do PDF
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", "inline; filename=Paper.pdf");
 
-    // Enviar o arquivo descriptografado para o cliente
+    // Enviar o PDF descriptografado
     return res.end(decryptedData);
   } catch (err) {
     console.error("Erro no backend:", err);
     return res.status(500).json({ success: false, error: "Erro interno no servidor." });
   }
 }
+
