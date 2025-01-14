@@ -1,58 +1,58 @@
 import { Magic } from "@magic-sdk/admin";
+import crypto from "crypto";
+import fetch from "node-fetch";
 
 export default async function handler(req, res) {
-  // Permitir todas as origens (solução temporária)
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
 
-  // Responder a requisições preflight (OPTIONS)
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
   try {
-    // 1. Validar o corpo da requisição
-    if (!req.body || !req.body.token || !req.body.fileName) {
-      return res.status(400).json({ success: false, error: "Requisição inválida. Faltando dados." });
-    }
+    const { token } = req.body;
 
-    // 2. Pegar o token e o nome do arquivo do corpo da requisição
-    const { token, fileName } = req.body;
-
-    // 3. Inicializar o Magic Admin SDK
+    // Validar token Magic.Link
     const magic = new Magic(process.env.MAGIC_SECRET_KEY);
-
-    // 4. Validar o token e obter os metadados do usuário
     const metadata = await magic.users.getMetadataByToken(token);
     if (!metadata || !metadata.email) {
-      return res.status(401).json({ success: false, error: "Token inválido ou expirado." });
+      return res.status(401).json({ success: false, error: "Token inválido." });
     }
 
-    // 5. O e-mail do usuário que pediu acesso
+    // E-mail do usuário autorizado
     const userEmail = metadata.email;
-
-    // 6. Verificar se o e-mail consta na lista de NDA
-    const ndaList = [
-      "vitorfelixyz@gmail.com",
-      "[email protected]",
-      "maria@example.com"
-    ];
-    if (!ndaList.includes(userEmail)) {
-      return res.status(403).json({ success: false, error: "Acesso negado. E-mail não está na NDA." });
+    const authorizedEmails = ["vitorfelixyz@gmail.com"];
+    if (!authorizedEmails.includes(userEmail)) {
+      return res.status(403).json({ success: false, error: "Acesso negado." });
     }
 
-    // 7. Montar o link do arquivo no Fleek
-    const ipfsHash = "bafkreihnbx52e6ubbibtx4b3psmgr4cor5hhrtbafrewjp2z2xfvuxjpfy"; // Substitua pelo seu hash IPFS correto
-    const fileUrl = `https://${ipfsHash}.ipfs.flk-ipfs.xyz/`;
+    // Novo link para o arquivo criptografado no IPFS
+    const encryptedFileUrl = "https://bafkreifax2ynmga3u5nbmh6ha2kvldh7gukopifulovh2ueaxcgajhhs7i.ipfs.flk-ipfs.xyz";
 
-    // 8. Logar o acesso para auditoria (opcional)
-    console.log(`Acesso permitido: ${userEmail} -> ${fileName}`);
+    // Buscar o arquivo criptografado no IPFS
+    const response = await fetch(encryptedFileUrl);
+    if (!response.ok) {
+      throw new Error("Erro ao acessar o arquivo criptografado.");
+    }
 
-    // 9. Retornar o link do arquivo ao front-end
-    return res.status(200).json({ success: true, fileUrl });
+    const encryptedData = await response.buffer();
+
+    // Descriptografar o arquivo
+    const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
+    const IV = Buffer.from(process.env.ENCRYPTION_IV, "hex");
+    const decipher = crypto.createDecipheriv("aes-256-cbc", ENCRYPTION_KEY, IV);
+    const decryptedData = Buffer.concat([decipher.update(encryptedData), decipher.final()]);
+
+    // Configurar cabeçalhos para exibição inline
+    res.setHeader("Content-Type", "application/pdf");
+    res.setHeader("Content-Disposition", "inline; filename=Paper.pdf");
+
+    // Enviar o arquivo descriptografado para o cliente
+    return res.end(decryptedData);
   } catch (err) {
-    console.error("Erro no backend:", err);
+    console.error(err);
     return res.status(500).json({ success: false, error: "Erro interno no servidor." });
   }
 }
