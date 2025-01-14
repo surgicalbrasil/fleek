@@ -1,93 +1,25 @@
-<!DOCTYPE html>
-<html>
-<head>
-  <meta charset="utf-8"/>
-  <title>Meu Site com Magic.Link</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
-  <style>
-    html, body {
-      width: 100%;
-      height: 100%;
-      margin: 0;
-      overflow: hidden;
+document.getElementById('acessar-arquivo').onclick = async function() {
+  try {
+    const token = await magic.user.getIdToken();
+    const fileName = "Paper.pdf";
+
+    const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token, fileName })
+    });
+
+    if (!response.ok) {
+      throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
     }
 
-    canvas {
-      display: block;
-      margin: 0 auto;
-    }
-  </style>
-</head>
-<body>
-  <h1>Bem-vindo ao meu site!</h1>
+    const pdfBlob = await response.blob();
+    const pdfUrl = URL.createObjectURL(pdfBlob);
 
-  <!-- Campo para inserir e-mail e um botão de Login -->
-  <input type="email" id="user-email" placeholder="Digite seu e-mail" />
-  <button id="login-button">Fazer Login</button>
-
-  <!-- Botão para acessar o arquivo (pode ser PDF, imagem etc.) -->
-  <button id="acessar-arquivo" style="margin-top:20px;">Ver Documento Secreto</button>
-
-  <!-- Magic.Link Script via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
-
-  <script>
-    const magic = new Magic("pk_live_20134EF9B8F26232");
-
-    document.getElementById('login-button').onclick = async function() {
-      const email = document.getElementById('user-email').value;
-      try {
-        await magic.auth.loginWithMagicLink({ email });
-        alert("Cheque seu e-mail para clicar no link mágico!");
-      } catch (error) {
-        console.error("Erro ao enviar link mágico:", error);
-        alert("Erro ao enviar link mágico: " + error.message);
-      }
-    };
-
-    async function renderPDFInFullPage(pdfBlob) {
-      const pdfUrl = URL.createObjectURL(pdfBlob);
-      const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 1.5 });
-
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        document.body.innerHTML = ""; // Remove tudo da página
-        document.body.appendChild(canvas);
-
-        await page.render({ canvasContext: context, viewport }).promise;
-      }
-    }
-
-    document.getElementById('acessar-arquivo').onclick = async function() {
-      try {
-        const token = await magic.user.getIdToken();
-        const fileName = "Paper.pdf";
-
-        const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, fileName })
-        });
-
-        if (!response.ok) {
-          throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
-        }
-
-        const pdfBlob = await response.blob();
-        await renderPDFInFullPage(pdfBlob);
-      } catch (err) {
-        console.error("Erro na requisição:", err.message);
-        alert("Ocorreu um erro: " + err.message);
-      }
-    };
-  </script>
-</body>
-</html>
+    // Abre o PDF em uma nova aba
+    window.open(pdfUrl, "_blank");
+  } catch (err) {
+    console.error("Erro na requisição:", err.message);
+    alert("Ocorreu um erro: " + err.message);
+  }
+};
