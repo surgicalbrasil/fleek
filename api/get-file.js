@@ -1,6 +1,16 @@
 import { Magic } from "@magic-sdk/admin";
 
 export default async function handler(req, res) {
+  // Configuração de CORS
+  res.setHeader("Access-Control-Allow-Origin", "https://quiet-apartment-flat.on.fleek.app"); // Domínio do Fleek
+  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+
+  // Lidar com requisições preflight (OPTIONS)
+  if (req.method === "OPTIONS") {
+    return res.status(200).end();
+  }
+
   try {
     // 1. Validar o corpo da requisição
     if (!req.body || !req.body.token || !req.body.fileName) {
@@ -43,7 +53,7 @@ export default async function handler(req, res) {
     // 9. Retornar o link do arquivo ao front-end
     return res.status(200).json({ success: true, fileUrl });
   } catch (err) {
-    console.error(err); // Loga qualquer erro inesperado para depuração
+    console.error("Erro no backend:", err); // Loga qualquer erro inesperado para depuração
     return res.status(500).json({ success: false, error: "Erro interno no servidor." });
   }
 }
