@@ -1,9 +1,0 @@
-{
-  "name": "vercel-serverless-function",
-  "version": "1.0.0",
-  "description": "Função serverless para Vercel com integração Magic.Link",
-  "type": "module",
-  "dependencies": {
-    "@magic-sdk/admin": "^2.4.1"
-  }
-}
