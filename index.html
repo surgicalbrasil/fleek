@@ -1,38 +1,66 @@
 <!DOCTYPE html>
-<html lang="pt-BR">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <title>Login com Magic.Link</title>
+  <meta charset="utf-8"/>
+  <title>Meu Site com Magic.Link</title>
 </head>
 <body>
-  <h1>Bem-vindo!</h1>
-  <p>Digite seu e-mail para receber o link mágico de login:</p>
+  <h1>Bem-vindo ao meu site!</h1>
 
-  <input id="user-email" type="email" placeholder="seu-email@exemplo.com" />
-  <button id="login-button">Entrar</button>
+  <!-- Campo para inserir e-mail e um botão de Login -->
+  <input type="email" id="user-email" placeholder="Digite seu e-mail">
+  <button id="login-button">Fazer Login</button>
 
-  <!-- Aqui exibiremos uma mensagem de sucesso ou erro -->
-  <div id="message"></div>
+  <!-- Botão para acessar o arquivo (pode ser PDF, imagem etc.) -->
+  <button id="acessar-arquivo" style="margin-top:20px;">Ver Documento Secreto</button>
 
-  <!-- Script do Magic.Link via CDN (ou você pode usar npm, se preferir) -->
+  <!-- Magic.Link Script via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
-
+  
   <script>
-    // Sua Publishable Key do Magic.Link
-    const magic = new Magic("pk_live_20134EF9B8F26232"); 
+    // Inicializa o Magic.Link no front-end
+    // Substitua PUBLISHABLE_KEY pelo valor real do seu Magic.Link (que começa com pk_live_... ou pk_test_...)
+    const magic = new Magic("pk_live_20134EF9B8F26232");
 
-    // Disparamos a função de login quando o usuário clica no botão
-    document.getElementById("login-button").onclick = async () => {
-      const email = document.getElementById("user-email").value;
-
+    // Ao clicar no botão "Fazer Login"
+    document.getElementById('login-button').onclick = async function() {
+      const email = document.getElementById('user-email').value;
       try {
-        // Magic.Link envia o e-mail mágico
+        // Magic envia um e-mail com link de login
         await magic.auth.loginWithMagicLink({ email });
-        document.getElementById("message").innerText = "Link de login enviado!";
+        alert("E-mail enviado! Clique no link para se autenticar.");
+      } catch (error) {
+        alert("Erro ao enviar link: " + error.message);
+      }
+    };
+
+    // Ao clicar no botão "Ver Documento Secreto"
+    document.getElementById('acessar-arquivo').onclick = async function() {
+      try {
+        // Pegar o "token" do Magic, que prova que o usuário está logado
+        const token = await magic.user.getIdToken();
+
+        // Fazer uma requisição para a função serverless na Vercel
+        // Substitua <SEU-PROJETO> pelo nome do seu projeto na Vercel
+        const response = await fetch("https://fleek-git-main-surgical-brasils-projects.vercel.app/api/get-file", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, fileName: "Paper.pdf" })
+        });
+
+        const result = await response.json();
+
+        if (result.success) {
+          // Se deu certo, a função serverless retorna o link do arquivo
+          window.location.href = result.fileUrl;
+        } else {
+          alert("Acesso negado ou erro: " + result.error);
+        }
       } catch (err) {
-        document.getElementById("message").innerText = "Erro ao enviar link: " + err.message;
+        alert("Ocorreu um erro: " + err.message);
       }
     };
   </script>
 </body>
+</html>
 </html>
