@@ -5,34 +5,11 @@
   <title>Meu Site com Magic.Link</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      margin: 0;
-      padding: 20px;
-    }
-
-    h1 {
-      text-align: center;
-      margin-bottom: 20px;
-    }
-
-    input, button {
-      display: block;
-      margin: 10px auto;
-      padding: 10px;
-      font-size: 16px;
-    }
-
-    button {
-      cursor: pointer;
-    }
-
-    #pdf-viewer {
+    html, body {
       width: 100%;
-      height: 90vh;
-      border: 1px solid #ccc;
-      margin-top: 20px;
-      overflow: auto;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
     }
 
     canvas {
@@ -44,54 +21,33 @@
 <body>
   <h1>Bem-vindo ao meu site!</h1>
 
-  <!-- Campo para inserir e-mail e botão de Login -->
+  <!-- Campo para inserir e-mail e um botão de Login -->
   <input type="email" id="user-email" placeholder="Digite seu e-mail" />
   <button id="login-button">Fazer Login</button>
 
-  <!-- Botão para acessar o arquivo -->
+  <!-- Botão para acessar o arquivo (pode ser PDF, imagem etc.) -->
   <button id="acessar-arquivo" style="margin-top:20px;">Ver Documento Secreto</button>
-
-  <!-- Div para renderizar o PDF -->
-  <div id="pdf-viewer"></div>
 
   <!-- Magic.Link Script via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
 
   <script>
-    const magic = new Magic("pk_live_20134EF9B8F26232"); // Substitua pela sua Publishable Key
+    const magic = new Magic("pk_live_20134EF9B8F26232");
 
-    // Função para exibir alertas de sucesso ou erro
-    function showAlert(message) {
-      alert(message);
-    }
-
-    // Ao clicar no botão "Fazer Login"
     document.getElementById('login-button').onclick = async function() {
       const email = document.getElementById('user-email').value;
       try {
-        if (!email) {
-          showAlert("Por favor, insira um e-mail válido!");
-          return;
-        }
-
-        // Magic envia um e-mail com link de login
         await magic.auth.loginWithMagicLink({ email });
-        showAlert("Cheque seu e-mail para clicar no link mágico!");
+        alert("Cheque seu e-mail para clicar no link mágico!");
       } catch (error) {
         console.error("Erro ao enviar link mágico:", error);
-        showAlert("Erro ao enviar link mágico: " + error.message);
+        alert("Erro ao enviar link mágico: " + error.message);
       }
     };
 
-    // Função para renderizar o PDF na página
-    async function renderPDF(pdfBlob) {
-      const pdfViewer = document.getElementById('pdf-viewer');
-      pdfViewer.innerHTML = ""; // Limpar visualizador
-
+    async function renderPDFInFullPage(pdfBlob) {
       const pdfUrl = URL.createObjectURL(pdfBlob);
-
       const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
-      console.log("PDF carregado:", pdf);
 
       for (let i = 1; i <= pdf.numPages; i++) {
         const page = await pdf.getPage(i);
@@ -103,13 +59,13 @@
         canvas.width = viewport.width;
         canvas.height = viewport.height;
 
-        pdfViewer.appendChild(canvas);
+        document.body.innerHTML = ""; // Remove tudo da página
+        document.body.appendChild(canvas);
 
         await page.render({ canvasContext: context, viewport }).promise;
       }
     }
 
-    // Ao clicar no botão "Ver Documento Secreto"
     document.getElementById('acessar-arquivo').onclick = async function() {
       try {
         const token = await magic.user.getIdToken();
@@ -126,13 +82,10 @@
         }
 
         const pdfBlob = await response.blob();
-        console.log("Arquivo recebido como Blob");
-
-        // Renderizar o PDF diretamente no visualizador
-        await renderPDF(pdfBlob);
+        await renderPDFInFullPage(pdfBlob);
       } catch (err) {
         console.error("Erro na requisição:", err.message);
-        showAlert("Ocorreu um erro: " + err.message);
+        alert("Ocorreu um erro: " + err.message);
       }
     };
   </script>
