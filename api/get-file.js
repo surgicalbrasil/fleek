@@ -31,7 +31,7 @@ export default async function handler(req, res) {
     }
 
     const userEmail = metadata.email;
-    const authorizedEmails = ["vitorfelixyz@gmail.com", "surgical.brasil@gmail.com"];
+    const authorizedEmails = ["vitorfelixyz@gmail.com", "surgical.brasil@gmail.com","viniciusfelixyz@gmail.com"];
     if (!authorizedEmails.includes(userEmail)) {
       return res.status(403).json({ success: false, error: "Acesso negado." });
     }
