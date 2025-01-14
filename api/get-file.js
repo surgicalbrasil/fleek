@@ -44,7 +44,7 @@ export default async function handler(req, res) {
 
     // 7. Montar o link do arquivo no Fleek
     const ipfsHash = "bafkreihnbx52e6ubbibtx4b3psmgr4cor5hhrtbafrewjp2z2xfvuxjpfy"; // Substitua pelo seu hash IPFS correto
-    const fileUrl = `https://ipfs.io/ipfs/${ipfsHash}/${fileName}`;
+    const fileUrl = `https://${ipfsHash}.ipfs.flk-ipfs.xyz/`;
 
     // 8. Logar o acesso para auditoria (opcional)
     console.log(`Acesso permitido: ${userEmail} -> ${fileName}`);
