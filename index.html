@@ -97,7 +97,7 @@
         }
 
         // 5. Converter a resposta para Blob (binário)
-        const pdfBlob = await response.blob();
+        const pdfBlob = await response.blob(); // Corrigido para tratar como binário
         console.log("Arquivo recebido como Blob");
 
         // 6. Renderizar o PDF no visualizador
