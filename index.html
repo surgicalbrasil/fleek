@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8" />
+  <title>Login com Magic.Link</title>
+</head>
+<body>
+  <h1>Bem-vindo!</h1>
+  <p>Digite seu e-mail para receber o link mágico de login:</p>
+
+  <input id="user-email" type="email" placeholder="seu-email@exemplo.com" />
+  <button id="login-button">Entrar</button>
+
+  <!-- Aqui exibiremos uma mensagem de sucesso ou erro -->
+  <div id="message"></div>
+
+  <!-- Script do Magic.Link via CDN (ou você pode usar npm, se preferir) -->
+  <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
+
+  <script>
+    // Sua Publishable Key do Magic.Link
+    const magic = new Magic("pk_live_20134EF9B8F26232"); 
+
+    // Disparamos a função de login quando o usuário clica no botão
+    document.getElementById("login-button").onclick = async () => {
+      const email = document.getElementById("user-email").value;
+
+      try {
+        // Magic.Link envia o e-mail mágico
+        await magic.auth.loginWithMagicLink({ email });
+        document.getElementById("message").innerText = "Link de login enviado!";
+      } catch (err) {
+        document.getElementById("message").innerText = "Erro ao enviar link: " + err.message;
+      }
+    };
+  </script>
+</body>
+</html>
