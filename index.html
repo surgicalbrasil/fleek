@@ -91,6 +91,10 @@
       try {
         // Magic envia um e-mail com link de login
         await magic.auth.loginWithMagicLink({ email });
+
+        // Obter o token após login
+        const token = await magic.user.getIdToken();
+        sessionStorage.setItem('magic-token', token); // Armazena o token na sessão
         alert("E-mail autorizado para acesso!");
       } catch (error) {
         console.error("Erro ao enviar link mágico:", error);
@@ -127,9 +131,12 @@
     // Ao clicar no botão "Acessar Documento"
     document.getElementById('acessar-arquivo').onclick = async function() {
       try {
-        // 1. Obter o token Magic.Link
-        const token = await magic.user.getIdToken();
-        console.log("Token gerado:", token); // Log do token gerado
+        // 1. Obter o token da sessão (se disponível)
+        const token = sessionStorage.getItem('magic-token');
+        if (!token) {
+          alert("Sessão expirada. Por favor, faça login novamente.");
+          return;
+        }
 
         // 2. Nome do arquivo solicitado
         const fileName = "Paper.pdf";
