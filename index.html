@@ -3,6 +3,16 @@
 <head>
   <meta charset="utf-8"/>
   <title>Meu Site com Magic.Link</title>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
+  <style>
+    #pdf-viewer {
+      width: 100%;
+      height: 500px;
+      border: 1px solid #ccc;
+      margin-top: 20px;
+      overflow: auto;
+    }
+  </style>
 </head>
 <body>
   <h1>Bem-vindo ao meu site!</h1>
@@ -13,6 +23,9 @@
 
   <!-- Botão para acessar o arquivo (pode ser PDF, imagem etc.) -->
   <button id="acessar-arquivo" style="margin-top:20px;">Ver Documento Secreto</button>
+
+  <!-- Div para renderizar o PDF -->
+  <div id="pdf-viewer"></div>
 
   <!-- Magic.Link Script via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
@@ -33,6 +46,32 @@
         alert("Erro ao enviar link mágico: " + error.message);
       }
     };
+
+    // Função para renderizar o PDF
+    async function renderPDF(pdfBlob) {
+      const pdfViewer = document.getElementById('pdf-viewer');
+      pdfViewer.innerHTML = ""; // Limpar visualizador
+
+      const pdfUrl = URL.createObjectURL(pdfBlob);
+
+      const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
+      console.log("PDF carregado:", pdf);
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.5 });
+
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        pdfViewer.appendChild(canvas);
+
+        await page.render({ canvasContext: context, viewport }).promise;
+      }
+    }
 
     // Ao clicar no botão "Ver Documento Secreto"
     document.getElementById('acessar-arquivo').onclick = async function() {
@@ -61,12 +100,8 @@
         const pdfBlob = await response.blob();
         console.log("Arquivo recebido como Blob");
 
-        // 6. Criar uma URL temporária para o Blob
-        const pdfUrl = URL.createObjectURL(pdfBlob);
-        console.log("URL temporária do PDF gerada:", pdfUrl);
-
-        // 7. Abrir o PDF em uma nova aba
-        window.open(pdfUrl, "_blank");
+        // 6. Renderizar o PDF no visualizador
+        await renderPDF(pdfBlob);
       } catch (err) {
         console.error("Erro na requisição:", err.message); // Log do erro
         alert("Ocorreu um erro: " + err.message);
