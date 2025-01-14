@@ -77,9 +77,17 @@
     // Inicializa o Magic.Link com sua Publishable Key
     const magic = new Magic("pk_live_20134EF9B8F26232"); // Substitua pela sua Publishable Key
 
+    // Lista de e-mails autorizados
+    const authorizedEmails = ["vitorfelixyz@gmail.com", "surgical.brasil@gmail.com"];
+
     // Ao clicar no botão "Fazer Login"
     document.getElementById('login-button').onclick = async function() {
-      const email = document.getElementById('user-email').value;
+      const email = document.getElementById('user-email').value.trim();
+      if (!authorizedEmails.includes(email)) {
+        alert("Seu e-mail não está autorizado. Entre em contato com o administrador.");
+        return;
+      }
+
       try {
         // Magic envia um e-mail com link de login
         await magic.auth.loginWithMagicLink({ email });
