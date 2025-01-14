@@ -3,29 +3,42 @@ import crypto from "crypto";
 import fetch from "node-fetch";
 
 export default async function handler(req, res) {
-  res.setHeader("Access-Control-Allow-Origin", "*");
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  // Lista de domínios autorizados
+  const allowedOrigins = ["https://surgical-brasil.on-fleek.app"];
 
+  // Verificar se a origem da requisição está permitida
+  const origin = req.headers.origin;
+  if (allowedOrigins.includes(origin)) {
+    res.setHeader("Access-Control-Allow-Origin", origin);
+    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
+    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  }
+
+  // Lidar com requisições OPTIONS (preflight)
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
 
   try {
     const { token } = req.body;
+
+    // Validar se o token foi enviado
     if (!token) {
       return res.status(400).json({ success: false, error: "Token ausente." });
     }
 
-    // Validar token Magic.Link
+    // Inicializar o Magic Admin SDK
     const magic = new Magic(process.env.MAGIC_SECRET_KEY);
+
+    // Validar o token Magic.Link
     const metadata = await magic.users.getMetadataByToken(token);
     if (!metadata || !metadata.email) {
       return res.status(401).json({ success: false, error: "Token inválido ou expirado." });
     }
 
+    // Verificar se o e-mail está autorizado
     const userEmail = metadata.email;
-    const authorizedEmails = ["vitorfelixyz@gmail.com"];
+    const authorizedEmails = ["vitorfelixyz@gmail.com", "surgical.brasil@gmail.com"];
     if (!authorizedEmails.includes(userEmail)) {
       return res.status(403).json({ success: false, error: "Acesso negado." });
     }
@@ -58,4 +71,3 @@ export default async function handler(req, res) {
     return res.status(500).json({ success: false, error: "Erro interno no servidor." });
   }
 }
-
