@@ -4,6 +4,6 @@
   "description": "Função serverless para Vercel com integração Magic.Link",
   "type": "module",
   "dependencies": {
-    "@magic-sdk/admin": "^3.3.1"
+    "@magic-sdk/admin": "^3.0.0"
   }
 }
