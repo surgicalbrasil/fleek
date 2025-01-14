@@ -1,0 +1,10 @@
+{
+  "name": "backend-vercel",
+  "version": "1.0.0",
+  "scripts": {
+    "start": "vercel dev"
+  },
+  "dependencies": {
+    "@magic-sdk/admin": "^2.0.0"
+  }
+}
