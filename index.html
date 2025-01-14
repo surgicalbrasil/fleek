@@ -48,6 +48,14 @@
       height: calc(100vh - 50px); /* Altura total menos o cabeçalho */
       overflow: auto;
       background-color: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* Centraliza os canvas */
+    }
+
+    canvas {
+      margin: 20px 0; /* Espaçamento entre as páginas */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Adiciona sombra para destacar cada página */
     }
   </style>
 </head>
