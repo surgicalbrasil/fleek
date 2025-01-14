@@ -3,7 +3,6 @@
 <head>
   <meta charset="utf-8"/>
   <title>Meu Site com Magic.Link</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -31,7 +30,7 @@
 <body>
   <h1>Bem-vindo ao meu site!</h1>
 
-  <!-- Campo para inserir e-mail e um botão de Login -->
+  <!-- Campo para inserir e-mail e botão de Login -->
   <input type="email" id="user-email" placeholder="Digite seu e-mail" />
   <button id="login-button">Fazer Login</button>
 
@@ -45,7 +44,7 @@
     // Inicializa o Magic.Link com sua Publishable Key
     const magic = new Magic("pk_live_20134EF9B8F26232"); // Substitua pela sua Publishable Key
 
-    // Função para exibir alerta de sucesso ou erro
+    // Função para exibir alertas de sucesso ou erro
     function showAlert(message) {
       alert(message);
     }
