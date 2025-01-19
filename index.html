@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <title>Surgical Brasil Confidential Viewer</title>
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js" async></script>
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <style>
     body {
       font-family: Arial, sans-serif;
@@ -43,15 +43,6 @@
       background-color: #0056b3;
     }
 
-    /* Novo estilo para o botão "Assinar NDA" */
-    #header .nda-button {
-      background-color: #28a745;
-    }
-
-    #header .nda-button:hover {
-      background-color: #218838;
-    }
-
     #pdf-viewer {
       width: 100%;
       height: calc(100vh - 50px); /* Altura total menos o cabeçalho */
@@ -60,61 +51,11 @@
       display: flex;
       flex-direction: column;
       align-items: center; /* Centraliza os canvas */
-      padding: 10px;
-      box-sizing: border-box;
     }
 
     canvas {
-      max-width: 100%;
-      height: auto;
       margin: 20px 0; /* Espaçamento entre as páginas */
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Adiciona sombra para destacar cada página */
-    }
-
-    #loading-indicator {
-      display: none;
-      text-align: center;
-      margin-top: 20px;
-      font-size: 16px;
-      color: #555;
-    }
-
-    /* Estilos para a modal de NDA */
-    .modal {
-      display: none; /* Oculto por padrão */
-      position: fixed; /* Fica fixo na tela */
-      z-index: 1000; /* Fica acima de outros elementos */
-      left: 0;
-      top: 0;
-      width: 100%;
-      height: 100%;
-      overflow: auto; /* Habilita scroll se necessário */
-      background-color: rgba(0,0,0,0.5); /* Fundo semi-transparente */
-    }
-
-    .modal-content {
-      background-color: #fefefe;
-      margin: 5% auto; /* 5% do topo e centralizado horizontalmente */
-      padding: 20px;
-      border: 1px solid #888;
-      width: 80%; /* Largura da modal */
-      max-width: 800px;
-      height: 80%; /* Altura da modal */
-      box-sizing: border-box;
-    }
-
-    .close {
-      color: #aaa;
-      float: right;
-      font-size: 28px;
-      font-weight: bold;
-      cursor: pointer;
-    }
-
-    .close:hover,
-    .close:focus {
-      color: black;
-      text-decoration: none;
     }
   </style>
 </head>
@@ -122,31 +63,13 @@
   <!-- Cabeçalho -->
   <div id="header">
     <input type="email" id="user-email" placeholder="Digite seu e-mail" />
-    <div>
-      <button id="login-button">Fazer Login</button>
-      <button id="acessar-arquivo">Acessar Documento</button>
-      <button id="logout-button">Logout</button>
-      <!-- Botão "Assinar NDA" Adicionado -->
-      <button id="assinar-nda" class="nda-button">Assinar NDA</button>
-    </div>
+    <button id="login-button">Fazer Login</button>
+    <button id="acessar-arquivo">Acessar Documento</button>
+    <button id="logout-button">Logout</button>
   </div>
 
   <!-- Visualizador de PDF -->
   <div id="pdf-viewer"></div>
-
-  <!-- Indicador de Carregamento -->
-  <div id="loading-indicator">Carregando documento...</div>
-
-  <!-- Modal para Assinar NDA -->
-  <div id="nda-modal" class="modal">
-    <div class="modal-content">
-      <span class="close" id="close-nda-modal">&times;</span>
-      <h2>Assine o NDA</h2>
-      <iframe src="https://na4.documents.adobe.com/public/esignWidget?wid=CBFCIBAA3AAABLblqZhBkJpLmkcW_zgTsJtSGXmeQdT76wAjj1-WHyHmqOzzeCbGtCfGZhqBTg8t7qA8ycMQ*&hosted=false" width="100%" height="90%" frameborder="0" style="border: 0; overflow: hidden; min-height: 500px; min-width: 600px;"></iframe>
-      <!-- Script do Adobe Sign Widget -->
-      <script type='text/javascript' language='JavaScript' src='https://na4.documents.adobe.com/public/embeddedWidget?wid=CBFCIBAA3AAABLblqZhBkJpLmkcW_zgTsJtSGXmeQdT76wAjj1-WHyHmqOzzeCbGtCfGZhqBTg8t7qA8ycMQ*'></script>
-    </div>
-  </div>
 
   <!-- Magic.Link Script via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
@@ -155,37 +78,15 @@
     // Inicializa o Magic.Link com sua Publishable Key
     const magic = new Magic("pk_live_20134EF9B8F26232"); // Substitua pela sua Publishable Key
 
-    // Botões e elementos
-    const loginButton = document.getElementById("login-button");
-    const acessarArquivoButton = document.getElementById("acessar-arquivo");
-    const logoutButton = document.getElementById("logout-button");
-    const assinarNdaButton = document.getElementById("assinar-nda");
-    const ndaModal = document.getElementById("nda-modal");
-    const closeNdaModal = document.getElementById("close-nda-modal");
-
-    // Função para abrir a modal de NDA
-    assinarNdaButton.onclick = function() {
-      ndaModal.style.display = "block";
-    };
-
-    // Função para fechar a modal de NDA
-    closeNdaModal.onclick = function() {
-      ndaModal.style.display = "none";
-    };
-
-    // Fechar a modal clicando fora do conteúdo
-    window.onclick = function(event) {
-      if (event.target == ndaModal) {
-        ndaModal.style.display = "none";
-      }
-    };
+    // Lista de e-mails autorizados
+    const authorizedEmails = ["vitorfelixyz@gmail.com", "surgical.brasil@gmail.com","viniciusfelixyz@gmail.com"];
 
     // Botão "Fazer Login"
-    loginButton.onclick = async function () {
+    document.getElementById("login-button").onclick = async function () {
       const email = document.getElementById("user-email").value.trim();
 
-      if (!email) {
-        alert("Por favor, insira um e-mail válido.");
+      if (!authorizedEmails.includes(email)) {
+        alert("E-mail não autorizado para acesso. Assine o NDA para continuar.");
         return;
       }
 
@@ -202,7 +103,7 @@
     };
 
     // Botão "Acessar Documento"
-    acessarArquivoButton.onclick = async function () {
+    document.getElementById("acessar-arquivo").onclick = async function () {
       try {
         const token = sessionStorage.getItem("magic-token");
         if (!token) {
@@ -212,82 +113,23 @@
 
         const fileName = "Paper.pdf";
 
-        const response = await fetch("https://fleek-nine.vercel.app/api/get-file", { // Mantenha a URL absoluta original
+        const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token, fileName }),
         });
 
         if (!response.ok) {
-          let errorMessage = `Erro ao acessar o backend: ${response.statusText}`;
-          try {
-            const errorData = await response.json();
-            if (errorData.error) {
-              errorMessage = errorData.error;
-            }
-          } catch (e) {
-            console.error("Erro ao analisar resposta de erro:", e);
-          }
-          throw new Error(errorMessage);
+          throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
         }
 
         const pdfBlob = await response.blob();
         await renderPDF(pdfBlob);
       } catch (err) {
-        console.error("Erro ao acessar documento:", err);
+        console.error("Erro ao acessar documento:", err.message);
         alert("Ocorreu um erro: " + err.message);
       }
     };
 
     // Botão "Logout"
-    logoutButton.onclick = async function () {
-      try {
-        await magic.user.logout(); // Logout no Magic SDK
-        sessionStorage.removeItem("magic-token"); // Remove o token armazenado
-        alert("Você foi deslogado com sucesso.");
-        document.getElementById("pdf-viewer").innerHTML = ""; // Limpar o visualizador
-      } catch (error) {
-        console.error("Erro ao realizar logout:", error);
-        alert("Erro ao realizar logout: " + error.message);
-      }
-    };
-
-    // Função para renderizar o PDF
-    async function renderPDF(pdfBlob) {
-      const pdfViewer = document.getElementById("pdf-viewer");
-      const loadingIndicator = document.getElementById("loading-indicator");
-      pdfViewer.innerHTML = ""; // Limpar visualizador
-      loadingIndicator.style.display = "block"; // Mostrar indicador de carregamento
-
-      try {
-        const pdfUrl = URL.createObjectURL(pdfBlob);
-        const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
-
-        for (let i = 1; i <= pdf.numPages; i++) {
-          const page = await pdf.getPage(i);
-          const viewport = page.getViewport({ scale: 1.5 });
-
-          const canvas = document.createElement("canvas");
-          const context = canvas.getContext("2d");
-
-          canvas.width = viewport.width;
-          canvas.height = viewport.height;
-
-          pdfViewer.appendChild(canvas);
-
-          await page.render({ canvasContext: context, viewport }).promise;
-        }
-      } catch (error) {
-        console.error("Erro ao renderizar PDF:", error);
-        alert("Erro ao renderizar o documento.");
-      } finally {
-        loadingIndicator.style.display = "none"; // Ocultar indicador de carregamento
-      }
-    }
-
-    // Função para atualizar a autorização após a assinatura do NDA
-    // (Implementação depende do fluxo de assinatura e backend)
-    // Você pode usar um webhook ou verificar o status do NDA após a assinatura
-  </script>
-</body>
-</html>
+    document.getElementById("logout-button").onclick = async
