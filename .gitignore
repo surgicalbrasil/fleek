@@ -1,5 +1,0 @@
-# Ignorar a pasta node_modules
-node_modules/
-
-# Ignorar o arquivo Paper.encrypted (opcional)
-files/Paper.encrypted
