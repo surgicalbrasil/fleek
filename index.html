@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <title>Surgical Brasil Confidential Viewer</title>
+  <!-- Inclua apenas uma vez o PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <style>
     body {
@@ -135,7 +136,7 @@
     </div>
   </div>
 
-  <!-- Magic.Link Script via CDN -->
+  <!-- Magic.Link Script via CDN (Incluído apenas uma vez) -->
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
   
   <script>
@@ -154,24 +155,24 @@
     const closeNdaModal = document.getElementById("close-nda-modal"); // Botão de fechar modal
 
     // Função para abrir a modal de NDA
-    assinarNdaButton.onclick = function() {
+    assinarNdaButton.addEventListener("click", function() {
       ndaModal.style.display = "block";
-    };
+    });
 
     // Função para fechar a modal de NDA
-    closeNdaModal.onclick = function() {
+    closeNdaModal.addEventListener("click", function() {
       ndaModal.style.display = "none";
-    };
+    });
 
     // Fechar a modal clicando fora do conteúdo
-    window.onclick = function(event) {
-      if (event.target == ndaModal) {
+    window.addEventListener("click", function(event) {
+      if (event.target === ndaModal) {
         ndaModal.style.display = "none";
       }
-    };
+    });
 
     // Botão "Fazer Login"
-    loginButton.onclick = async function () {
+    loginButton.addEventListener("click", async function () {
       const email = document.getElementById("user-email").value.trim();
 
       if (!authorizedEmails.includes(email)) {
@@ -189,10 +190,10 @@
         console.error("Erro ao enviar link mágico:", error);
         alert("Erro ao enviar link mágico: " + error.message);
       }
-    };
+    });
 
     // Botão "Acessar Documento"
-    acessarArquivoButton.onclick = async function () {
+    acessarArquivoButton.addEventListener("click", async function () {
       try {
         const token = sessionStorage.getItem("magic-token");
         if (!token) {
@@ -218,10 +219,10 @@
         console.error("Erro ao acessar documento:", err.message);
         alert("Ocorreu um erro: " + err.message);
       }
-    };
+    });
 
     // Botão "Logout"
-    logoutButton.onclick = async function () {
+    logoutButton.addEventListener("click", async function () {
       try {
         await magic.user.logout(); // Logout no Magic SDK
         sessionStorage.removeItem("magic-token"); // Remove o token armazenado
@@ -231,7 +232,7 @@
         console.error("Erro ao realizar logout:", error);
         alert("Erro ao realizar logout: " + error.message);
       }
-    };
+    });
 
     // Função para renderizar o PDF
     async function renderPDF(pdfBlob) {
