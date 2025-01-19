@@ -1,18 +1,26 @@
-// /api/get-file.js
+// /pages/api/get-file.js
 import { Magic } from "@magic-sdk/admin";
 import crypto from "crypto";
 import fetch from "node-fetch";
-import { google } from "googleapis"; // Importa a biblioteca googleapis
+import { google } from "googleapis";
+import Cors from 'cors';
+import initMiddleware from '../../lib/init-middleware';
+
+// Inicializa o middleware CORS
+const cors = initMiddleware(
+  Cors({
+    methods: ['POST', 'OPTIONS'],
+    origin: 'https://surgical-brasil.on-fleek.app', // Substitua pela URL do seu front-end
+    allowedHeaders: ['Content-Type'],
+  })
+);
 
 export default async function handler(req, res) {
-  // Configurar cabeçalhos de CORS
-  res.setHeader("Access-Control-Allow-Origin", "https://surgical-brasil.on-fleek.app"); // Substitua pela URL do seu front-end
-  res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-  res.setHeader("Access-Control-Allow-Headers", "Content-Type");
+  // Executa o middleware CORS
+  await cors(req, res);
 
   // Lidar com requisições OPTIONS (preflight)
   if (req.method === "OPTIONS") {
-    console.log("Requisição OPTIONS recebida.");
     return res.status(200).end();
   }
 
@@ -118,12 +126,6 @@ export default async function handler(req, res) {
     return res.end(decryptedData);
   } catch (err) {
     console.error("Erro no backend:", err);
-
-    // Garantir que os cabeçalhos de CORS estão definidos antes de enviar a resposta de erro
-    res.setHeader("Access-Control-Allow-Origin", "https://surgical-brasil.on-fleek.app"); // Substitua pela URL do seu front-end
-    res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
-    res.setHeader("Access-Control-Allow-Headers", "Content-Type");
-
     return res.status(500).json({ success: false, error: "Erro interno no servidor." });
   }
 }
