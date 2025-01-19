@@ -37,6 +37,8 @@
       color: white;
       border-radius: 4px;
       cursor: pointer;
+      /* Adicionado type="button" para evitar comportamento de submit */
+      type: button;
     }
 
     #header button:hover {
@@ -111,20 +113,17 @@
   <div id="header">
     <input type="email" id="user-email" placeholder="Digite seu e-mail" />
     <div>
-      <button id="login-button">Fazer Login</button>
-      <button id="acessar-arquivo">Acessar Documento</button>
-      <button id="logout-button">Logout</button>
+      <button id="login-button" type="button">Fazer Login</button>
+      <button id="acessar-arquivo" type="button">Acessar Documento</button>
+      <button id="logout-button" type="button">Logout</button>
       <!-- Botão "Assinar NDA" Adicionado -->
-      <button id="assinar-nda" class="nda-button">Assinar NDA</button>
+      <button id="assinar-nda" class="nda-button" type="button">Assinar NDA</button>
     </div>
   </div>
 
   <!-- Visualizador de PDF -->
   <div id="pdf-viewer"></div>
 
-  <!-- Magic.Link Script via CDN -->
-  <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
-  
   <!-- Modal para Assinar NDA -->
   <div id="nda-modal" class="modal">
     <div class="modal-content">
@@ -136,6 +135,9 @@
     </div>
   </div>
 
+  <!-- Magic.Link Script via CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
+  
   <script>
     // Inicializa o Magic.Link com sua Publishable Key
     const magic = new Magic("pk_live_20134EF9B8F26232"); // Substitua pela sua Publishable Key
