@@ -6,11 +6,11 @@ import { google } from "googleapis";
 import Cors from 'cors';
 import initMiddleware from '../../lib/init-middleware';
 
-// Inicializa o middleware CORS
+// Inicializa o middleware CORS para permitir todas as origens
 const cors = initMiddleware(
   Cors({
     methods: ['POST', 'OPTIONS'],
-    origin: 'https://surgical-brasil.on-fleek.app', // Substitua pela URL do seu front-end
+    origin: '*', // Permite todas as origens
     allowedHeaders: ['Content-Type'],
   })
 );
