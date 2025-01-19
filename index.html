@@ -91,35 +91,19 @@
     // Inicializa o Magic.Link com sua Publishable Key
     const magic = new Magic("pk_live_20134EF9B8F26232"); // Substitua pela sua Publishable Key
 
+    // Lista de e-mails autorizados
+    const authorizedEmails = ["vitorfelixyz@gmail.com", "surgical.brasil@gmail.com","viniciusfelixyz@gmail.com"];
+
     // Botão "Fazer Login"
     document.getElementById("login-button").onclick = async function () {
-      const email = document.getElementById("user-email").value.trim().toLowerCase();
+      const email = document.getElementById("user-email").value.trim();
 
-      if (!email) {
-        alert("Por favor, insira um e-mail.");
+      if (!authorizedEmails.includes(email)) {
+        alert("E-mail não autorizado para acesso. Assine o NDA para continuar.");
         return;
       }
 
       try {
-        // Verificar se o e-mail está autorizado via back-end
-        const checkResponse = await fetch("https://fleek-nine.vercel.app/api/check-email", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ email }),
-        });
-
-        const checkData = await checkResponse.json();
-
-        if (!checkData.success) {
-          throw new Error(checkData.error || "Erro ao verificar o e-mail.");
-        }
-
-        if (!checkData.authorized) {
-          alert("E-mail não autorizado para acesso. Assine o NDA para continuar.");
-          return;
-        }
-
-        // Se autorizado, prosseguir com o login via Magic.Link
         await magic.auth.loginWithMagicLink({ email });
 
         const token = await magic.user.getIdToken();
