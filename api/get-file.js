@@ -2,10 +2,10 @@
 import { Magic } from "@magic-sdk/admin";
 import crypto from "crypto";
 import fetch from "node-fetch";
-import { google } from "googleapis";
+import { google } from "googleapis"; // Importa a biblioteca googleapis
 
 export default async function handler(req, res) {
-  // CORS permissivo
+  // CORS permissivo (voltar ao esquema original)
   res.setHeader("Access-Control-Allow-Origin", "*");
   res.setHeader("Access-Control-Allow-Methods", "POST, OPTIONS");
   res.setHeader("Access-Control-Allow-Headers", "Content-Type");
@@ -15,16 +15,12 @@ export default async function handler(req, res) {
     return res.status(200).end();
   }
 
-  if (req.method !== "POST") {
-    return res.status(405).json({ success: false, error: "Método não permitido." });
-  }
-
   try {
-    const { token, fileName } = req.body;
+    const { token } = req.body;
 
-    // Verificar se o token e fileName foram enviados
-    if (!token || !fileName) {
-      return res.status(400).json({ success: false, error: "Token e nome do arquivo são obrigatórios." });
+    // Verificar se o token foi enviado
+    if (!token) {
+      return res.status(400).json({ success: false, error: "Token ausente." });
     }
 
     // Inicializar o Magic Admin SDK
@@ -36,7 +32,7 @@ export default async function handler(req, res) {
       return res.status(401).json({ success: false, error: "Token inválido ou expirado." });
     }
 
-    const userEmail = metadata.email.toLowerCase();
+    const userEmail = metadata.email.toLowerCase(); // Converte para minúsculas para consistência
 
     // Inicializar o cliente do Google Sheets
     const credentials = JSON.parse(Buffer.from(process.env.GOOGLE_SHEETS_CREDENTIALS, 'base64').toString('utf-8'));
@@ -54,7 +50,7 @@ export default async function handler(req, res) {
 
     // Definir o ID da planilha e o intervalo
     const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-    const range = process.env.GOOGLE_SHEETS_RANGE || "AuthorizedEmails!A:A";
+    const range = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!A:A";
 
     // Buscar os dados da planilha
     const responseSheet = await sheets.spreadsheets.values.get({
@@ -81,12 +77,12 @@ export default async function handler(req, res) {
     const encryptedFileUrl = process.env.ENCRYPTED_FILE_URL || "https://bafkreifax2ynmga3u5nbmh6ha2kvldh7gukopifulovh2ueaxcgajhhs7i.ipfs.flk-ipfs.xyz";
 
     // Buscar o arquivo criptografado no IPFS
-    const responseFile = await fetch(encryptedFileUrl);
-    if (!responseFile.ok) {
+    const response = await fetch(encryptedFileUrl);
+    if (!response.ok) {
       throw new Error("Erro ao acessar o arquivo criptografado.");
     }
 
-    const encryptedData = await responseFile.buffer();
+    const encryptedData = await response.buffer();
 
     // Descriptografar o arquivo
     const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
@@ -96,7 +92,7 @@ export default async function handler(req, res) {
 
     // Configurar cabeçalhos para envio do PDF
     res.setHeader("Content-Type", "application/pdf");
-    res.setHeader("Content-Disposition", `inline; filename="${fileName}"`);
+    res.setHeader("Content-Disposition", "inline; filename=Paper.pdf");
 
     // Enviar o PDF descriptografado
     return res.end(decryptedData);
