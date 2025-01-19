@@ -6,7 +6,7 @@ import { google } from "googleapis";
 import Cors from 'cors';
 import initMiddleware from '../../lib/init-middleware';
 
-// Inicializa o middleware CORS para permitir todas as origens
+// Inicializa o middleware CORS para permitir todas as origens (apenas para teste)
 const cors = initMiddleware(
   Cors({
     methods: ['POST', 'OPTIONS'],
@@ -21,6 +21,7 @@ export default async function handler(req, res) {
 
   // Lidar com requisições OPTIONS (preflight)
   if (req.method === "OPTIONS") {
+    console.log("Requisição OPTIONS recebida.");
     return res.status(200).end();
   }
 
@@ -51,8 +52,10 @@ export default async function handler(req, res) {
     console.log(`Email do usuário: ${userEmail}`);
 
     // Inicializar o cliente do Google Sheets
-    const credentials = JSON.parse(Buffer.from(process.env.GOOGLE_SHEETS_CREDENTIALS, 'base64').toString('utf-8'));
-    console.log("Credenciais do Google Sheets decodificadas.");
+    const credentialsString = Buffer.from(process.env.GOOGLE_SHEETS_CREDENTIALS, 'base64').toString('utf-8');
+    console.log("Credenciais do Google Sheets decodificadas:", credentialsString);
+
+    const credentials = JSON.parse(credentialsString);
 
     const client = new google.auth.JWT(
       credentials.client_email,
