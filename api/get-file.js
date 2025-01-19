@@ -4,7 +4,7 @@ import crypto from "crypto";
 import fetch from "node-fetch";
 import { google } from "googleapis";
 import Cors from 'cors';
-import initMiddleware from '../../lib/init-middleware';
+import initMiddleware from '../../lib/init-middleware'; // Caminho relativo corrigido
 
 // Inicializa o middleware CORS para permitir todas as origens (apenas para teste)
 const cors = initMiddleware(
@@ -52,10 +52,8 @@ export default async function handler(req, res) {
     console.log(`Email do usuário: ${userEmail}`);
 
     // Inicializar o cliente do Google Sheets
-    const credentialsString = Buffer.from(process.env.GOOGLE_SHEETS_CREDENTIALS, 'base64').toString('utf-8');
-    console.log("Credenciais do Google Sheets decodificadas:", credentialsString);
-
-    const credentials = JSON.parse(credentialsString);
+    const credentials = JSON.parse(Buffer.from(process.env.GOOGLE_SHEETS_CREDENTIALS, 'base64').toString('utf-8'));
+    console.log("Credenciais do Google Sheets decodificadas.");
 
     const client = new google.auth.JWT(
       credentials.client_email,
