@@ -212,15 +212,23 @@
 
         const fileName = "Paper.pdf";
 
-        const response = await fetch("/api/get-file", { // Use URL relativa
+        const response = await fetch("https://fleek-nine.vercel.app/api/get-file", { // Mantenha a URL absoluta original
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token, fileName }),
         });
 
         if (!response.ok) {
-          const errorData = await response.json();
-          throw new Error(errorData.error || `Erro ao acessar o backend: ${response.statusText}`);
+          let errorMessage = `Erro ao acessar o backend: ${response.statusText}`;
+          try {
+            const errorData = await response.json();
+            if (errorData.error) {
+              errorMessage = errorData.error;
+            }
+          } catch (e) {
+            console.error("Erro ao analisar resposta de erro:", e);
+          }
+          throw new Error(errorMessage);
         }
 
         const pdfBlob = await response.blob();
