@@ -4,7 +4,7 @@ import crypto from "crypto";
 import fetch from "node-fetch";
 import { google } from "googleapis";
 import Cors from 'cors';
-import initMiddleware from '../../lib/init-middleware'; // Caminho relativo corrigido
+import initMiddleware from './lib/init-middleware'; // Caminho correto para dentro da pasta api
 
 // Inicializa o middleware CORS para permitir todas as origens
 const cors = initMiddleware(
