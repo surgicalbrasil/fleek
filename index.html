@@ -89,13 +89,16 @@
   
   <script>
     // Inicializa o Magic.Link com sua Publishable Key
-    const magic = new Magic("pk_live_20134EF9B8F26232"); // Substitua pela sua Publishable Key
+    console.log("Inicializando Magic.Link...");
+    const magic = new Magic("pk_live_20134EF9B8F26232");
+    console.log("Magic.Link inicializado com sucesso.");
 
     // Lista de e-mails autorizados
-    const authorizedEmails = ["vitorfelixyz@gmail.com", "surgical.brasil@gmail.com","viniciusfelixyz@gmail.com"];
+    const authorizedEmails = ["vitorfelixyz@gmail.com", "surgical.brasil@gmail.com", "viniciusfelixyz@gmail.com"];
 
     // Botão "Fazer Login"
     document.getElementById("login-button").onclick = async function () {
+      console.log("Botão de login clicado.");
       const email = document.getElementById("user-email").value.trim();
 
       if (!authorizedEmails.includes(email)) {
@@ -105,7 +108,6 @@
 
       try {
         await magic.auth.loginWithMagicLink({ email });
-
         const token = await magic.user.getIdToken();
         sessionStorage.setItem("magic-token", token);
         alert("Login realizado com sucesso!");
@@ -117,6 +119,7 @@
 
     // Botão "Acessar Documento"
     document.getElementById("acessar-arquivo").onclick = async function () {
+      console.log("Botão acessar documento clicado.");
       try {
         const token = sessionStorage.getItem("magic-token");
         if (!token) {
@@ -133,7 +136,7 @@
         });
 
         if (!response.ok) {
-          throw new Error(Erro ao acessar o backend: ${response.statusText});
+          throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
         }
 
         const pdfBlob = await response.blob();
@@ -146,6 +149,7 @@
 
     // Botão "Logout"
     document.getElementById("logout-button").onclick = async function () {
+      console.log("Botão logout clicado.");
       try {
         await magic.user.logout(); // Logout no Magic SDK
         sessionStorage.removeItem("magic-token"); // Remove o token armazenado
@@ -159,6 +163,7 @@
 
     // Botão "Assinar NDA"
     document.getElementById("assinar-nda").onclick = function () {
+      console.log("Botão assinar NDA clicado.");
       const ndaUrl = "https://na4.documents.adobe.com/public/esignWidget?wid=CBFCIBAA3AAABLblqZhBkJpLmkcW_zgTsJtSGXmeQdT76wAjj1-WHyHmqOzzeCbGtCfGZhqBTg8t7qA8ycMQ*";
       window.open(ndaUrl, '_blank');
     };
@@ -186,10 +191,6 @@
         await page.render({ canvasContext: context, viewport }).promise;
       }
     }
-
-    // Função para atualizar a autorização após a assinatura do NDA
-    // (Implementação depende do fluxo de assinatura e backend)
-    // Você pode usar um webhook ou verificar o status do NDA após a assinatura
   </script>
 </body>
 </html>
