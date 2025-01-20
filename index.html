@@ -5,7 +5,67 @@
   <title>Surgical Brasil Confidential Viewer</title>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <style>
-    /* Estilos omitidos para manter o foco no JavaScript */
+    body {
+      font-family: Arial, sans-serif;
+      margin: 0;
+      padding: 0;
+    }
+
+    #header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 10px 20px;
+      background-color: #f5f5f5;
+      border-bottom: 1px solid #ccc;
+    }
+
+    #header input[type="email"] {
+      padding: 5px;
+      font-size: 14px;
+      width: 250px;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+    }
+
+    #header button {
+      margin-left: 10px;
+      padding: 6px 12px;
+      font-size: 14px;
+      border: none;
+      background-color: #007bff;
+      color: white;
+      border-radius: 4px;
+      cursor: pointer;
+    }
+
+    #header button:hover {
+      background-color: #0056b3;
+    }
+
+    /* Novo estilo para o botão "Assinar NDA" */
+    #header .nda-button {
+      background-color: #28a745; /* Verde */
+    }
+
+    #header .nda-button:hover {
+      background-color: #218838; /* Verde Escuro */
+    }
+
+    #pdf-viewer {
+      width: 100%;
+      height: calc(100vh - 50px); /* Altura total menos o cabeçalho */
+      overflow: auto;
+      background-color: #f9f9f9;
+      display: flex;
+      flex-direction: column;
+      align-items: center; /* Centraliza os canvas */
+    }
+
+    canvas {
+      margin: 20px 0; /* Espaçamento entre as páginas */
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Adiciona sombra para destacar cada página */
+    }
   </style>
 </head>
 <body>
@@ -16,6 +76,7 @@
       <button id="login-button">Fazer Login</button>
       <button id="acessar-arquivo">Acessar Documento</button>
       <button id="logout-button">Logout</button>
+      <!-- Botão "Assinar NDA" Adicionado -->
       <button id="assinar-nda" class="nda-button">Assinar NDA</button>
     </div>
   </div>
@@ -25,35 +86,40 @@
 
   <!-- Magic.Link Script via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
-  
-  <script>
-    const magic = new Magic("pk_live_20134EF9B8F26232");
-    let authorizedEmails = [];
 
-    // Função para buscar e-mails autorizados do backend
+  <script>
+    // Inicializa o Magic.Link com sua Publishable Key
+    console.log("Inicializando Magic.Link...");
+    const magic = new Magic("pk_live_20134EF9B8F26232");
+    console.log("Magic.Link inicializado com sucesso.");
+
+    // Função para buscar a lista de e-mails autorizados do backend
     async function fetchAuthorizedEmails() {
       try {
         const response = await fetch("https://fleek-nine.vercel.app/api/get-authorized-emails");
-        if (!response.ok) throw new Error(`Erro ao buscar e-mails: ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(`Erro ao buscar e-mails: ${response.statusText}`);
+        }
         const data = await response.json();
         if (data.success) {
-          authorizedEmails = data.emails;
-          console.log("E-mails autorizados carregados:", authorizedEmails);
+          return data.emails || [];
         } else {
           console.error("Erro ao carregar e-mails autorizados:", data.error);
+          return [];
         }
       } catch (err) {
-        console.error("Erro na API de e-mails autorizados:", err);
-        alert("Erro ao carregar lista de e-mails autorizados. Tente novamente mais tarde.");
+        console.error("Erro ao buscar e-mails autorizados:", err);
+        return [];
       }
     }
 
-    // Inicializa e busca e-mails autorizados
-    fetchAuthorizedEmails();
-
     // Botão "Fazer Login"
     document.getElementById("login-button").onclick = async function () {
+      console.log("Botão de login clicado.");
       const email = document.getElementById("user-email").value.trim();
+
+      // Buscar e-mails autorizados
+      const authorizedEmails = await fetchAuthorizedEmails();
 
       if (!authorizedEmails.includes(email.toLowerCase())) {
         alert("E-mail não autorizado para acesso. Assine o NDA para continuar.");
@@ -73,6 +139,7 @@
 
     // Botão "Acessar Documento"
     document.getElementById("acessar-arquivo").onclick = async function () {
+      console.log("Botão acessar documento clicado.");
       try {
         const token = sessionStorage.getItem("magic-token");
         if (!token) {
@@ -81,13 +148,16 @@
         }
 
         const fileName = "Paper.pdf";
+
         const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ token, fileName }),
         });
 
-        if (!response.ok) throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
+        if (!response.ok) {
+          throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
+        }
 
         const pdfBlob = await response.blob();
         await renderPDF(pdfBlob);
@@ -97,10 +167,31 @@
       }
     };
 
+    // Botão "Logout"
+    document.getElementById("logout-button").onclick = async function () {
+      console.log("Botão logout clicado.");
+      try {
+        await magic.user.logout(); // Logout no Magic SDK
+        sessionStorage.removeItem("magic-token"); // Remove o token armazenado
+        alert("Você foi deslogado com sucesso.");
+        document.getElementById("pdf-viewer").innerHTML = ""; // Limpar o visualizador
+      } catch (error) {
+        console.error("Erro ao realizar logout:", error);
+        alert("Erro ao realizar logout: " + error.message);
+      }
+    };
+
+    // Botão "Assinar NDA"
+    document.getElementById("assinar-nda").onclick = function () {
+      console.log("Botão assinar NDA clicado.");
+      const ndaUrl = "https://na4.documents.adobe.com/public/esignWidget?wid=CBFCIBAA3AAABLblqZhBkJpLmkcW_zgTsJtSGXmeQdT76wAjj1-WHyHmqOzzeCbGtCfGZhqBTg8t7qA8ycMQ*";
+      window.open(ndaUrl, '_blank');
+    };
+
     // Função para renderizar o PDF
     async function renderPDF(pdfBlob) {
       const pdfViewer = document.getElementById("pdf-viewer");
-      pdfViewer.innerHTML = "";
+      pdfViewer.innerHTML = ""; // Limpar visualizador
 
       const pdfUrl = URL.createObjectURL(pdfBlob);
       const pdf = await pdfjsLib.getDocument(pdfUrl).promise;
@@ -116,6 +207,7 @@
         canvas.height = viewport.height;
 
         pdfViewer.appendChild(canvas);
+
         await page.render({ canvasContext: context, viewport }).promise;
       }
     }
