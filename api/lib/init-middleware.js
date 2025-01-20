@@ -1,4 +1,3 @@
-// /lib/init-middleware.js
 export default function initMiddleware(middleware) {
   return (req, res) =>
     new Promise((resolve, reject) => {
