@@ -5,8 +5,12 @@
   "type": "module",
   "dependencies": {
     "@magic-sdk/admin": "2.4.1",
-    "cors": "^2.8.5",
     "googleapis": "^100.0.0",
+    "cors": "^2.8.5",
     "node-fetch": "^2.6.7"
+  },
+  "scripts": {
+    "start": "vercel dev",
+    "build": "echo 'No build step necessary'"
   }
 }
