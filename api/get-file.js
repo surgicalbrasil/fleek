@@ -4,21 +4,27 @@ import crypto from "crypto";
 import fetch from "node-fetch";
 import { google } from "googleapis";
 import Cors from 'cors';
-import initMiddleware from './lib/init-middleware';
 
-// Inicializa o middleware CORS para permitir todas as origens
-const cors = initMiddleware(
-  Cors({
-    methods: ['POST', 'OPTIONS'],
-    origin: '*', // Permite todas as origens
-    allowedHeaders: ['Content-Type'],
-  })
-);
+// Inicializa o middleware CORS diretamente
+const cors = Cors({
+  methods: ['POST', 'OPTIONS'], // Métodos permitidos
+  origin: '*', // Permitir todas as origens (para testes, ajuste conforme necessário)
+  allowedHeaders: ['Content-Type'], // Cabeçalhos permitidos
+});
 
 export default async function handler(req, res) {
-  // Executa o middleware CORS
-  await cors(req, res);
+  // Configuração CORS sem middleware externo
+  await new Promise((resolve, reject) => {
+    cors(req, res, (err) => {
+      if (err) {
+        console.error("Erro no CORS:", err);
+        return reject(err);
+      }
+      resolve();
+    });
+  });
 
+  // Lidar com requisições OPTIONS (preflight)
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
@@ -30,7 +36,7 @@ export default async function handler(req, res) {
       return res.status(400).json({ success: false, error: "Token e nome do arquivo são obrigatórios." });
     }
 
-    // Inicializa o Magic Admin SDK
+    // Magic SDK: Validação do token
     const magic = new Magic(process.env.MAGIC_SECRET_KEY);
     const metadata = await magic.users.getMetadataByToken(token);
 
@@ -40,7 +46,7 @@ export default async function handler(req, res) {
 
     const userEmail = metadata.email.toLowerCase();
 
-    // Configurações do Google Sheets
+    // Google Sheets: Configuração e leitura dos e-mails autorizados
     const credentials = JSON.parse(Buffer.from(process.env.GOOGLE_SHEETS_CREDENTIALS, 'base64').toString('utf-8'));
     const client = new google.auth.JWT(
       credentials.client_email,
@@ -55,12 +61,9 @@ export default async function handler(req, res) {
     const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
     const range = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!A:A";
 
-    const responseSheet = await sheets.spreadsheets.values.get({
-      spreadsheetId,
-      range,
-    });
-
+    const responseSheet = await sheets.spreadsheets.values.get({ spreadsheetId, range });
     const rows = responseSheet.data.values;
+
     if (!rows || rows.length === 0) {
       return res.status(500).json({ success: false, error: "Nenhum dado encontrado na planilha." });
     }
@@ -71,6 +74,7 @@ export default async function handler(req, res) {
       return res.status(403).json({ success: false, error: "Acesso negado." });
     }
 
+    // Buscar e descriptografar o arquivo
     const encryptedFileUrl = process.env.ENCRYPTED_FILE_URL || "https://bafkreifax2ynmga3u5nbmh6ha2kvldh7gukopifulovh2ueaxcgajhhs7i.ipfs.flk-ipfs.xyz";
     const response = await fetch(encryptedFileUrl);
 
@@ -86,10 +90,9 @@ export default async function handler(req, res) {
 
     res.setHeader("Content-Type", "application/pdf");
     res.setHeader("Content-Disposition", `inline; filename="${fileName}"`);
-
     return res.end(decryptedData);
   } catch (err) {
-    console.error("Erro no backend:", err.message);
+    console.error("Erro no backend:", err);
     return res.status(500).json({ success: false, error: "Erro interno no servidor." });
   }
 }
