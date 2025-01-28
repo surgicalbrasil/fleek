@@ -207,7 +207,41 @@
     <div id="metaverso-modal-content">
       <button class="close-button" onclick="closeModal()">&times;</button>
       <h2>Cadastro no Metaverso</h2>
-      <p>Siga as instruções exibidas para acessar o Metaverso.</p>
+      <div class="step">
+        <div class="step-icon">1</div>
+        <div class="step-description">
+          <strong>Pré-requisitos:</strong> Carteira Web3 Metamask. <br>
+          Caso ainda não tenha, siga este tutorial gratuito: 
+          <a href="https://abrir.link/EXvyx" target="_blank">Tutorial Metamask</a>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-icon">2</div>
+        <div class="step-description">
+          Acesse o site: 
+          <a href="https://gotas.social/" target="_blank">https://gotas.social</a>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-icon">3</div>
+        <div class="step-description">
+          Faça login com sua carteira Web3 Metamask para acessar o painel de resgate.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-icon">4</div>
+        <div class="step-description">
+          Encontre o código no Certificado de Autenticidade: 
+          <a href="https://encurtador.com.br/ipw28" target="_blank">Certificado</a>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-icon">5</div>
+        <div class="step-description">
+          Insira o <strong>hash da transação</strong> no campo para resgatar sua NFT. <br>
+          <strong>Atenção:</strong> O código é pessoal e intransferível. O uso indevido pode gerar penalidades legais.
+        </div>
+      </div>
     </div>
   </div>
 
@@ -215,7 +249,7 @@
   <script>
     const magic = new Magic("pk_live_20134EF9B8F26232");
 
-    // Função para validar e-mails no backend
+    // Função para validar e-mail
     async function isEmailAuthorized(email) {
       try {
         const response = await fetch("https://fleek-nine.vercel.app/api/get-authorized-emails");
@@ -280,7 +314,7 @@
       }
     };
 
-    // Função para renderizar o PDF
+    // Renderizar PDF
     async function renderPDF(pdfBlob) {
       const pdfViewer = document.getElementById("pdf-viewer");
       pdfViewer.innerHTML = ""; // Limpar visualizador
@@ -301,19 +335,7 @@
       }
     }
 
-    // Função de logout
-    document.getElementById("logout-button").onclick = async function () {
-      try {
-        await magic.user.logout();
-        sessionStorage.clear();
-        alert("Logout realizado com sucesso!");
-      } catch (error) {
-        console.error("Erro ao realizar logout:", error);
-        alert("Erro ao realizar logout.");
-      }
-    };
-
-    // Função para abrir o modal do Metaverso
+    // Cadastro no Metaverso
     document.getElementById("cadastro-metaverso").onclick = function () {
       const token = sessionStorage.getItem("magic-token");
       if (!token) {
@@ -323,7 +345,6 @@
       document.getElementById("metaverso-modal").style.display = "flex";
     };
 
-    // Função para fechar o modal
     function closeModal() {
       document.getElementById("metaverso-modal").style.display = "none";
     }
