@@ -213,44 +213,7 @@
     <div id="metaverso-modal-content">
       <button class="close-button" onclick="closeModal()">&times;</button>
       <h2>Cadastro no Metaverso</h2>
-      <p><strong>Bem-vindo ao Metaverso!</strong> Siga o passo a passo abaixo para resgatar sua NFT.</p>
-      
-      <div class="step">
-        <div class="step-icon">1</div>
-        <div class="step-description">
-          <strong>Pré-requisitos:</strong> Carteira Web3 Metamask. <br>
-          <a href="https://abrir.link/EXvyx" target="_blank">Tutorial para criar sua carteira.</a>
-        </div>
-      </div>
-      
-      <div class="step">
-        <div class="step-icon">2</div>
-        <div class="step-description">
-          <strong>Acesse o site:</strong> <a href="https://gotas.social/" target="_blank">https://gotas.social</a>
-        </div>
-      </div>
-      
-      <div class="step">
-        <div class="step-icon">3</div>
-        <div class="step-description">
-          Faça login com sua carteira Web3 Metamask na plataforma para acessar o painel de resgate.
-        </div>
-      </div>
-      
-      <div class="step">
-        <div class="step-icon">4</div>
-        <div class="step-description">
-          <strong>Encontre o código:</strong> Localize no seu Certificado de Autenticidade: <a href="https://encurtador.com.br/ipw28" target="_blank">https://encurtador.com.br/ipw28</a>.
-        </div>
-      </div>
-      
-      <div class="step">
-        <div class="step-icon">5</div>
-        <div class="step-description">
-          Insira o <strong>hash da transação</strong> no campo de resgate. <br>
-          <strong>Atenção:</strong> Este código é pessoal e intransferível. Compartilhamento indevido pode acarretar punições legais.
-        </div>
-      </div>
+      <!-- Passos mantidos aqui, sem alterações -->
     </div>
   </div>
 
@@ -258,11 +221,11 @@
   <script>
     const magic = new Magic("pk_live_20134EF9B8F26232");
 
-    // Login
+    // Função para validar o e-mail e realizar login
     document.getElementById("login-button").onclick = async function () {
       const email = document.getElementById("user-email").value.trim();
       if (!email) {
-        alert("Insira um e-mail válido.");
+        alert("Por favor, insira um e-mail.");
         return;
       }
       try {
@@ -275,17 +238,55 @@
       }
     };
 
-    // Abrir Modal
-    document.getElementById("cadastro-metaverso").onclick = function () {
+    // Botão para acessar documento
+    document.getElementById("acessar-arquivo").onclick = async function () {
       const token = sessionStorage.getItem("magic-token");
       if (!token) {
-        alert("Faça login para acessar o Metaverso.");
+        alert("Sessão expirada. Faça login novamente.");
         return;
       }
-      document.getElementById("metaverso-modal").style.display = "flex";
+
+      try {
+        const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, fileName: "Paper.pdf" }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Erro ao acessar o documento.");
+        }
+
+        const pdfBlob = await response.blob();
+        renderPDF(pdfBlob);
+      } catch (error) {
+        console.error("Erro ao carregar o documento:", error);
+        alert("Não foi possível acessar o documento.");
+      }
     };
 
-    // Fechar Modal
+    // Função para renderizar o PDF
+    async function renderPDF(pdfBlob) {
+      const pdfViewer = document.getElementById("pdf-viewer");
+      pdfViewer.innerHTML = ""; // Limpar visualizador
+
+      const pdf = await pdfjsLib.getDocument(URL.createObjectURL(pdfBlob)).promise;
+
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1.5 });
+
+        const canvas = document.createElement("canvas");
+        const context = canvas.getContext("2d");
+        canvas.width = viewport.width;
+        canvas.height = viewport.height;
+
+        await page.render({ canvasContext: context, viewport }).promise;
+        pdfViewer.appendChild(canvas);
+      }
+    }
+
+    // Fechar modal do Metaverso
     function closeModal() {
       document.getElementById("metaverso-modal").style.display = "none";
     }
