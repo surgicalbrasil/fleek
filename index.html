@@ -255,6 +255,9 @@
     // Inicializar o Magic SDK
     const magic = new Magic("pk_live_20134EF9B8F26232");
 
+    // Configurar o worker do PDF.js
+    pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
     // Função para verificar se o e-mail está autorizado no backend
     async function isEmailAuthorized(email) {
       try {
@@ -332,6 +335,7 @@
         }
 
         const pdfBlob = await response.blob();
+        console.log("Documento PDF recebido:", pdfBlob);
         renderPDF(pdfBlob);
       } catch (error) {
         console.error("Erro ao carregar o documento:", error);
@@ -345,10 +349,10 @@
       pdfViewer.innerHTML = ""; // Limpar visualizador
 
       try {
-        // Definir o workerSrc para evitar erros
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
-
+        console.log("Renderizando o PDF...");
         const pdf = await pdfjsLib.getDocument(URL.createObjectURL(pdfBlob)).promise;
+        console.log(`Total de páginas: ${pdf.numPages}`);
+
         for (let i = 1; i <= pdf.numPages; i++) {
           const page = await pdf.getPage(i);
           const viewport = page.getViewport({ scale: 1.5 });
@@ -360,6 +364,7 @@
 
           await page.render({ canvasContext: context, viewport }).promise;
           pdfViewer.appendChild(canvas);
+          console.log(`Página ${i} renderizada.`);
         }
       } catch (error) {
         console.error("Erro ao renderizar o PDF:", error);
