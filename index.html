@@ -3,6 +3,7 @@
 <head>
   <meta charset="utf-8"/>
   <title>Surgical Brasil Confidential Viewer</title>
+  <!-- PDF.js Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <style>
     body {
@@ -11,6 +12,7 @@
       padding: 0;
     }
 
+    /* Cabeçalho */
     #header {
       display: flex;
       align-items: center;
@@ -76,6 +78,7 @@
       background-color: #c82333; /* Vermelho escuro */
     }
 
+    /* Visualizador de PDF */
     #pdf-viewer {
       width: 100%;
       height: calc(100vh - 50px); /* Altura total menos o cabeçalho */
@@ -91,6 +94,7 @@
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
     }
 
+    /* Modal para o Metaverso */
     #metaverso-modal {
       display: none; /* Oculto por padrão */
       position: fixed;
@@ -245,25 +249,43 @@
     </div>
   </div>
 
+  <!-- Magic SDK -->
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
   <script>
+    // Inicializar o Magic SDK
     const magic = new Magic("pk_live_20134EF9B8F26232");
 
-    // Função para validar e-mail
+    // Função para verificar se o e-mail está autorizado no backend
     async function isEmailAuthorized(email) {
       try {
+        console.log("Validando e-mail no backend...");
         const response = await fetch("https://fleek-nine.vercel.app/api/get-authorized-emails");
-        if (!response.ok) throw new Error("Erro ao acessar o backend.");
+        if (!response.ok) {
+          throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
+        }
+
         const data = await response.json();
-        return data.emails.includes(email.toLowerCase());
+        console.log("Resposta da API:", data);
+
+        // Verifica se a resposta contém a lista de e-mails
+        if (!data.emails || !Array.isArray(data.emails)) {
+          console.error("Formato inesperado do JSON retornado pelo backend:", data);
+          return false;
+        }
+
+        // Normaliza e verifica se o e-mail está autorizado
+        const authorized = data.emails.map(e => e.toLowerCase()).includes(email.toLowerCase());
+        console.log("E-mail autorizado?", authorized);
+        return authorized;
+
       } catch (error) {
-        console.error("Erro ao validar e-mail:", error);
-        alert("Erro ao validar o e-mail.");
+        console.error("Erro na validação do e-mail:", error);
+        alert("Erro ao validar o e-mail. Tente novamente mais tarde.");
         return false;
       }
     }
 
-    // Login
+    // Função de Login
     document.getElementById("login-button").onclick = async function () {
       const email = document.getElementById("user-email").value.trim();
       if (!email) {
@@ -273,34 +295,79 @@
 
       const isAuthorized = await isEmailAuthorized(email);
       if (!isAuthorized) {
-        alert("E-mail não autorizado.");
+        alert("E-mail não autorizado. Contate o administrador.");
         return;
       }
 
       try {
+        console.log("Realizando login...");
         await magic.auth.loginWithMagicLink({ email });
         const token = await magic.user.getIdToken();
         sessionStorage.setItem("magic-token", token);
         alert("Login realizado com sucesso!");
       } catch (error) {
+        console.error("Erro ao realizar login:", error);
         alert("Erro ao realizar login.");
       }
     };
 
-    // Logout
-    document.getElementById("logout-button").onclick = async function () {
+    // Função para acessar o documento
+    document.getElementById("acessar-arquivo").onclick = async function () {
+      const token = sessionStorage.getItem("magic-token");
+      if (!token) {
+        alert("Sessão expirada. Faça login novamente.");
+        return;
+      }
+
       try {
-        await magic.user.logout();
-        sessionStorage.clear();
-        document.getElementById("pdf-viewer").innerHTML = ""; // Limpa visualizador de PDF
-        alert("Logout realizado com sucesso!");
+        console.log("Buscando o documento PDF...");
+        const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ token, fileName: "Paper.pdf" }),
+        });
+
+        if (!response.ok) {
+          throw new Error("Erro ao acessar o documento.");
+        }
+
+        const pdfBlob = await response.blob();
+        renderPDF(pdfBlob);
       } catch (error) {
-        console.error("Erro ao realizar logout:", error);
-        alert("Erro ao realizar logout.");
+        console.error("Erro ao carregar o documento:", error);
+        alert("Erro ao acessar o documento.");
       }
     };
 
-    // Função de Cadastro no Metaverso
+    // Função para renderizar o PDF
+    async function renderPDF(pdfBlob) {
+      const pdfViewer = document.getElementById("pdf-viewer");
+      pdfViewer.innerHTML = ""; // Limpar visualizador
+
+      try {
+        // Definir o workerSrc para evitar erros
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
+
+        const pdf = await pdfjsLib.getDocument(URL.createObjectURL(pdfBlob)).promise;
+        for (let i = 1; i <= pdf.numPages; i++) {
+          const page = await pdf.getPage(i);
+          const viewport = page.getViewport({ scale: 1.5 });
+
+          const canvas = document.createElement("canvas");
+          const context = canvas.getContext("2d");
+          canvas.width = viewport.width;
+          canvas.height = viewport.height;
+
+          await page.render({ canvasContext: context, viewport }).promise;
+          pdfViewer.appendChild(canvas);
+        }
+      } catch (error) {
+        console.error("Erro ao renderizar o PDF:", error);
+        alert("Erro ao renderizar o PDF.");
+      }
+    }
+
+    // Função para abrir o modal do Metaverso
     document.getElementById("cadastro-metaverso").onclick = function () {
       const token = sessionStorage.getItem("magic-token");
       if (!token) {
@@ -310,10 +377,23 @@
       document.getElementById("metaverso-modal").style.display = "flex";
     };
 
-    // Fechar Modal
+    // Função para fechar o modal
     function closeModal() {
       document.getElementById("metaverso-modal").style.display = "none";
     }
+
+    // Função de Logout
+    document.getElementById("logout-button").onclick = async function () {
+      try {
+        console.log("Realizando logout...");
+        await magic.user.logout();
+        sessionStorage.clear();
+        alert("Logout realizado com sucesso!");
+      } catch (error) {
+        console.error("Erro ao realizar logout:", error);
+        alert("Erro ao realizar logout.");
+      }
+    };
   </script>
 </body>
 </html>
