@@ -52,6 +52,15 @@
       background-color: #218838; /* Verde Escuro */
     }
 
+    /* Novo estilo para o botão "Cadastro ao Metaverso" */
+    #header .meta-button {
+      background-color: #6f42c1; /* Roxo */
+    }
+
+    #header .meta-button:hover {
+      background-color: #5936a1; /* Roxo Escuro */
+    }
+
     #pdf-viewer {
       width: 100%;
       height: calc(100vh - 50px); /* Altura total menos o cabeçalho */
@@ -66,6 +75,58 @@
       margin: 20px 0; /* Espaçamento entre as páginas */
       box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2); /* Adiciona sombra para destacar cada página */
     }
+
+    /* Estilos para o Modal */
+    #metaverso-modal {
+      display: none; /* Oculto por padrão */
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.8);
+      z-index: 1000;
+      justify-content: center;
+      align-items: center;
+    }
+
+    #metaverso-modal-content {
+      background: #fff;
+      padding: 20px;
+      border-radius: 8px;
+      width: 90%;
+      max-width: 500px;
+      text-align: center;
+      position: relative;
+    }
+
+    #metaverso-modal-content h2 {
+      margin-top: 0;
+    }
+
+    #metaverso-modal-content button.close-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    #metaverso-modal-content button.close-button:hover {
+      background: #c82333;
+    }
+
+    #metaverso-modal-content img {
+      width: 200px;
+      height: 200px;
+      margin-top: 20px;
+    }
   </style>
 </head>
 <body>
@@ -78,11 +139,31 @@
       <button id="logout-button">Logout</button>
       <!-- Botão "Assinar NDA" Adicionado -->
       <button id="assinar-nda" class="nda-button">Assinar NDA</button>
+      <!-- Novo Botão "Cadastro ao Metaverso" -->
+      <button id="cadastro-metaverso" class="meta-button">Cadastro ao Metaverso</button>
     </div>
   </div>
 
   <!-- Visualizador de PDF -->
   <div id="pdf-viewer"></div>
+
+  <!-- Modal para o Metaverso -->
+  <div id="metaverso-modal">
+    <div id="metaverso-modal-content">
+      <button class="close-button" onclick="closeModal()">&times;</button>
+      <h2>Cadastro ao Metaverso</h2>
+      <p>Obrigado por entrar em nossa plataforma. Siga as etapas abaixo para resgatar a sua NFT:</p>
+      <ol style="text-align: left;">
+        <li>Faça login na plataforma.</li>
+        <li>Escaneie o QR code abaixo com seu aplicativo de carteira.</li>
+        <li>Resgate sua NFT insubstituível (NFT) pelo QR code abaixo.</li>
+      </ol>
+      <div id="qr-code-container">
+        <!-- QR Code será inserido aqui dinamicamente -->
+        <p>Carregando QR code...</p>
+      </div>
+    </div>
+  </div>
 
   <!-- Magic.Link Script via CDN -->
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
@@ -113,16 +194,32 @@
       }
     }
 
+    // Validação básica de e-mail
+    function isValidEmail(email) {
+      const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+      return emailRegex.test(email);
+    }
+
     // Botão "Fazer Login"
     document.getElementById("login-button").onclick = async function () {
+      const loginButton = this;
+      loginButton.disabled = true;
       console.log("Botão de login clicado.");
       const email = document.getElementById("user-email").value.trim();
+
+      // Validação de e-mail
+      if (!isValidEmail(email)) {
+        alert("Por favor, insira um e-mail válido.");
+        loginButton.disabled = false;
+        return;
+      }
 
       // Buscar e-mails autorizados
       const authorizedEmails = await fetchAuthorizedEmails();
 
       if (!authorizedEmails.includes(email.toLowerCase())) {
         alert("E-mail não autorizado para acesso. Assine o NDA para continuar.");
+        loginButton.disabled = false;
         return;
       }
 
@@ -134,16 +231,21 @@
       } catch (error) {
         console.error("Erro ao enviar link mágico:", error);
         alert("Erro ao enviar link mágico: " + error.message);
+      } finally {
+        loginButton.disabled = false;
       }
     };
 
     // Botão "Acessar Documento"
     document.getElementById("acessar-arquivo").onclick = async function () {
+      const acessarButton = this;
+      acessarButton.disabled = true;
       console.log("Botão acessar documento clicado.");
       try {
         const token = sessionStorage.getItem("magic-token");
         if (!token) {
           alert("Sessão expirada. Por favor, faça login novamente.");
+          acessarButton.disabled = false;
           return;
         }
 
@@ -164,11 +266,15 @@
       } catch (err) {
         console.error("Erro ao acessar documento:", err.message);
         alert("Ocorreu um erro: " + err.message);
+      } finally {
+        acessarButton.disabled = false;
       }
     };
 
     // Botão "Logout"
     document.getElementById("logout-button").onclick = async function () {
+      const logoutButton = this;
+      logoutButton.disabled = true;
       console.log("Botão logout clicado.");
       try {
         await magic.user.logout(); // Logout no Magic SDK
@@ -178,6 +284,8 @@
       } catch (error) {
         console.error("Erro ao realizar logout:", error);
         alert("Erro ao realizar logout: " + error.message);
+      } finally {
+        logoutButton.disabled = false;
       }
     };
 
@@ -187,6 +295,50 @@
       const ndaUrl = "https://na4.documents.adobe.com/public/esignWidget?wid=CBFCIBAA3AAABLblqZhBkJpLmkcW_zgTsJtSGXmeQdT76wAjj1-WHyHmqOzzeCbGtCfGZhqBTg8t7qA8ycMQ*";
       window.open(ndaUrl, '_blank');
     };
+
+    // Botão "Cadastro ao Metaverso"
+    document.getElementById("cadastro-metaverso").onclick = async function () {
+      const modal = document.getElementById("metaverso-modal");
+      modal.style.display = "flex";
+
+      // Obtém o token armazenado para verificar o login
+      const token = sessionStorage.getItem("magic-token");
+      if (!token) {
+        alert("Por favor, faça login antes de acessar o Metaverso.");
+        modal.style.display = "none";
+        return;
+      }
+
+      try {
+        const response = await fetch("https://fleek-nine.vercel.app/api/get-qr-code", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+            Authorization: `Bearer ${token}`,
+          },
+        });
+
+        if (!response.ok) {
+          throw new Error("Erro ao obter QR code.");
+        }
+
+        const data = await response.json();
+        const qrCodeContainer = document.getElementById("qr-code-container");
+
+        // Atualiza o QR Code dinamicamente
+        qrCodeContainer.innerHTML = `<img src="${data.qrCode}" alt="QR Code para Metaverso">`;
+      } catch (err) {
+        console.error("Erro ao carregar o QR code:", err.message);
+        alert("Não foi possível carregar o QR code.");
+        document.getElementById("metaverso-modal").style.display = "none";
+      }
+    };
+
+    // Função para fechar o modal
+    function closeModal() {
+      const modal = document.getElementById("metaverso-modal");
+      modal.style.display = "none";
+    }
 
     // Função para renderizar o PDF
     async function renderPDF(pdfBlob) {
