@@ -220,7 +220,7 @@
     document.getElementById("cadastro-metaverso").onclick = function () {
       const token = sessionStorage.getItem("magic-token");
       if (!token) {
-        alert("Por favor, faça login antes de acessar o Metaverso.");
+        alert("Sessão expirada. Faça login novamente.");
         return;
       }
       document.getElementById("metaverso-modal").style.display = "flex";
