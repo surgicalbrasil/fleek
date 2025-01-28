@@ -263,7 +263,7 @@
       }
     }
 
-    // Função de login
+    // Login
     document.getElementById("login-button").onclick = async function () {
       const email = document.getElementById("user-email").value.trim();
       if (!email) {
@@ -287,55 +287,20 @@
       }
     };
 
-    // Função para acessar o documento
-    document.getElementById("acessar-arquivo").onclick = async function () {
-      const token = sessionStorage.getItem("magic-token");
-      if (!token) {
-        alert("Sessão expirada. Faça login novamente.");
-        return;
-      }
-
+    // Logout
+    document.getElementById("logout-button").onclick = async function () {
       try {
-        const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ token, fileName: "Paper.pdf" }),
-        });
-
-        if (!response.ok) {
-          throw new Error("Erro ao acessar o documento.");
-        }
-
-        const pdfBlob = await response.blob();
-        renderPDF(pdfBlob);
+        await magic.user.logout();
+        sessionStorage.clear();
+        document.getElementById("pdf-viewer").innerHTML = ""; // Limpa visualizador de PDF
+        alert("Logout realizado com sucesso!");
       } catch (error) {
-        console.error("Erro ao carregar o documento:", error);
-        alert("Erro ao acessar o documento.");
+        console.error("Erro ao realizar logout:", error);
+        alert("Erro ao realizar logout.");
       }
     };
 
-    // Renderizar PDF
-    async function renderPDF(pdfBlob) {
-      const pdfViewer = document.getElementById("pdf-viewer");
-      pdfViewer.innerHTML = ""; // Limpar visualizador
-
-      const pdf = await pdfjsLib.getDocument(URL.createObjectURL(pdfBlob)).promise;
-
-      for (let i = 1; i <= pdf.numPages; i++) {
-        const page = await pdf.getPage(i);
-        const viewport = page.getViewport({ scale: 1.5 });
-
-        const canvas = document.createElement("canvas");
-        const context = canvas.getContext("2d");
-        canvas.width = viewport.width;
-        canvas.height = viewport.height;
-
-        await page.render({ canvasContext: context, viewport }).promise;
-        pdfViewer.appendChild(canvas);
-      }
-    }
-
-    // Cadastro no Metaverso
+    // Função de Cadastro no Metaverso
     document.getElementById("cadastro-metaverso").onclick = function () {
       const token = sessionStorage.getItem("magic-token");
       if (!token) {
@@ -345,6 +310,7 @@
       document.getElementById("metaverso-modal").style.display = "flex";
     };
 
+    // Fechar Modal
     function closeModal() {
       document.getElementById("metaverso-modal").style.display = "none";
     }
