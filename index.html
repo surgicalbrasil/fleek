@@ -123,64 +123,6 @@
       margin-bottom: 20px;
     }
 
-    #metaverso-modal-content p {
-      font-size: 16px;
-      line-height: 1.6;
-      color: #555;
-    }
-
-    .step {
-      display: flex;
-      align-items: flex-start;
-      margin-bottom: 20px;
-    }
-
-    .step-icon {
-      flex-shrink: 0;
-      width: 30px;
-      height: 30px;
-      background-color: #ffc107;
-      color: black;
-      font-weight: bold;
-      border-radius: 50%;
-      display: flex;
-      justify-content: center;
-      align-items: center;
-      margin-right: 15px;
-    }
-
-    .step-description {
-      font-size: 16px;
-      line-height: 1.6;
-    }
-
-    #metaverso-modal-content a {
-      color: #007bff;
-      text-decoration: none;
-    }
-
-    #metaverso-modal-content a:hover {
-      text-decoration: underline;
-    }
-
-    #metaverso-modal-content button.close-button {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: #dc3545;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    #metaverso-modal-content button.close-button:hover {
-      background: #c82333;
-    }
-
     @keyframes fadeIn {
       from {
         opacity: 0;
@@ -213,7 +155,7 @@
     <div id="metaverso-modal-content">
       <button class="close-button" onclick="closeModal()">&times;</button>
       <h2>Cadastro no Metaverso</h2>
-      <!-- Passos mantidos aqui, sem alterações -->
+      <p>Siga as instruções exibidas para acessar o Metaverso.</p>
     </div>
   </div>
 
@@ -221,24 +163,48 @@
   <script>
     const magic = new Magic("pk_live_20134EF9B8F26232");
 
-    // Função para validar o e-mail e realizar login
+    // Função para verificar se o e-mail está autorizado no backend
+    async function isEmailAuthorized(email) {
+      try {
+        const response = await fetch("https://fleek-nine.vercel.app/api/get-authorized-emails");
+        if (!response.ok) {
+          throw new Error("Erro ao acessar o backend.");
+        }
+        const data = await response.json();
+        return data.emails.includes(email.toLowerCase());
+      } catch (error) {
+        console.error("Erro na validação do e-mail:", error);
+        alert("Erro ao validar o e-mail. Tente novamente mais tarde.");
+        return false;
+      }
+    }
+
+    // Função para realizar o login
     document.getElementById("login-button").onclick = async function () {
       const email = document.getElementById("user-email").value.trim();
       if (!email) {
-        alert("Por favor, insira um e-mail.");
+        alert("Por favor, insira um e-mail válido.");
         return;
       }
+
+      const isAuthorized = await isEmailAuthorized(email);
+      if (!isAuthorized) {
+        alert("E-mail não autorizado. Entre em contato com o administrador.");
+        return;
+      }
+
       try {
         await magic.auth.loginWithMagicLink({ email });
         const token = await magic.user.getIdToken();
         sessionStorage.setItem("magic-token", token);
         alert("Login realizado com sucesso!");
       } catch (error) {
-        alert("Erro ao realizar login.");
+        console.error("Erro no login:", error);
+        alert("Erro ao realizar login. Tente novamente.");
       }
     };
 
-    // Botão para acessar documento
+    // Função para acessar documento
     document.getElementById("acessar-arquivo").onclick = async function () {
       const token = sessionStorage.getItem("magic-token");
       if (!token) {
@@ -261,7 +227,7 @@
         renderPDF(pdfBlob);
       } catch (error) {
         console.error("Erro ao carregar o documento:", error);
-        alert("Não foi possível acessar o documento.");
+        alert("Erro ao acessar o documento.");
       }
     };
 
@@ -286,18 +252,29 @@
       }
     }
 
-    // Fechar modal do Metaverso
+    // Função para abrir o modal do Metaverso
+    document.getElementById("cadastro-metaverso").onclick = function () {
+      const token = sessionStorage.getItem("magic-token");
+      if (!token) {
+        alert("Faça login para acessar o Metaverso.");
+        return;
+      }
+      document.getElementById("metaverso-modal").style.display = "flex";
+    };
+
+    // Função para fechar o modal
     function closeModal() {
       document.getElementById("metaverso-modal").style.display = "none";
     }
 
-    // Logout
+    // Função de logout
     document.getElementById("logout-button").onclick = async function () {
       try {
         await magic.user.logout();
         sessionStorage.clear();
         alert("Logout realizado com sucesso!");
-      } catch {
+      } catch (error) {
+        console.error("Erro ao realizar logout:", error);
         alert("Erro ao realizar logout.");
       }
     };
