@@ -107,33 +107,20 @@
     #metaverso-modal-content {
       background: #fff;
       padding: 20px;
-      border-radius: 8px;
+      border-radius: 12px;
       width: 90%;
-      max-width: 500px;
-      text-align: center;
+      max-width: 600px;
+      text-align: left;
       position: relative;
+      box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+      animation: fadeIn 0.3s ease-in-out;
     }
 
     #metaverso-modal-content h2 {
-      margin-top: 0;
-    }
-
-    #metaverso-modal-content button.close-button {
-      position: absolute;
-      top: 10px;
-      right: 10px;
-      background: #dc3545;
-      color: white;
-      border: none;
-      border-radius: 50%;
-      width: 30px;
-      height: 30px;
-      cursor: pointer;
-      font-size: 16px;
-    }
-
-    #metaverso-modal-content button.close-button:hover {
-      background: #c82333;
+      font-size: 24px;
+      color: #333;
+      text-align: center;
+      margin-bottom: 20px;
     }
 
     .step {
@@ -169,6 +156,35 @@
     #metaverso-modal-content a:hover {
       text-decoration: underline;
     }
+
+    #metaverso-modal-content button.close-button {
+      position: absolute;
+      top: 10px;
+      right: 10px;
+      background: #dc3545;
+      color: white;
+      border: none;
+      border-radius: 50%;
+      width: 30px;
+      height: 30px;
+      cursor: pointer;
+      font-size: 16px;
+    }
+
+    #metaverso-modal-content button.close-button:hover {
+      background: #c82333;
+    }
+
+    @keyframes fadeIn {
+      from {
+        opacity: 0;
+        transform: scale(0.9);
+      }
+      to {
+        opacity: 1;
+        transform: scale(1);
+      }
+    }
   </style>
 </head>
 <body>
@@ -191,7 +207,38 @@
     <div id="metaverso-modal-content">
       <button class="close-button" onclick="closeModal()">&times;</button>
       <h2>Cadastro no Metaverso</h2>
-      <p>Siga as instruções exibidas para acessar o Metaverso.</p>
+      <div class="step">
+        <div class="step-icon">1</div>
+        <div class="step-description">
+          <strong>Pré-requisitos:</strong> Carteira Web3 Metamask. <br>
+          Caso ainda não tenha, siga este tutorial gratuito: <a href="https://abrir.link/EXvyx" target="_blank">Tutorial Metamask</a>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-icon">2</div>
+        <div class="step-description">
+          Acesse o site: <a href="https://gotas.social/" target="_blank">https://gotas.social</a>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-icon">3</div>
+        <div class="step-description">
+          Faça login com sua carteira Web3 Metamask para acessar o painel de resgate.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-icon">4</div>
+        <div class="step-description">
+          Encontre o código no Certificado de Autenticidade: <a href="https://encurtador.com.br/ipw28" target="_blank">Certificado</a>.
+        </div>
+      </div>
+      <div class="step">
+        <div class="step-icon">5</div>
+        <div class="step-description">
+          Insira o <strong>hash da transação</strong> no campo para resgatar sua NFT. <br>
+          <strong>Atenção:</strong> O código é pessoal e intransferível. O uso indevido pode gerar penalidades legais.
+        </div>
+      </div>
     </div>
   </div>
 
@@ -215,7 +262,7 @@
       }
     }
 
-    // Função de Login
+    // Login
     document.getElementById("login-button").onclick = async function () {
       const email = document.getElementById("user-email").value.trim();
       if (!email) {
@@ -240,7 +287,7 @@
       }
     };
 
-    // Função para acessar o documento
+    // Acessar Documento
     document.getElementById("acessar-arquivo").onclick = async function () {
       const token = sessionStorage.getItem("magic-token");
       if (!token) {
@@ -263,14 +310,14 @@
         renderPDF(pdfBlob);
       } catch (error) {
         console.error("Erro ao carregar o documento:", error);
-        alert("Não foi possível acessar o documento.");
+        alert("Erro ao acessar o documento.");
       }
     };
 
-    // Função para renderizar o PDF
+    // Renderizar PDF
     async function renderPDF(pdfBlob) {
       const pdfViewer = document.getElementById("pdf-viewer");
-      pdfViewer.innerHTML = ""; // Limpa o visualizador
+      pdfViewer.innerHTML = ""; // Limpar visualizador
 
       const pdf = await pdfjsLib.getDocument(URL.createObjectURL(pdfBlob)).promise;
 
@@ -288,7 +335,7 @@
       }
     }
 
-    // Função para abrir o modal
+    // Cadastro no Metaverso
     document.getElementById("cadastro-metaverso").onclick = function () {
       const token = sessionStorage.getItem("magic-token");
       if (!token) {
