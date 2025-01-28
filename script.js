@@ -47,7 +47,7 @@ document.getElementById("login-button").addEventListener("click", async () => {
 
   const isAuthorized = await isEmailAuthorized(email);
   if (!isAuthorized) {
-    alert("E-mail não autorizado. Contate o administrador.");
+    alert("E-mail não autorizado. Assine o NDA.");
     return;
   }
 
@@ -125,7 +125,7 @@ async function renderPDF(pdfBlob) {
 document.getElementById("cadastro-metaverso").addEventListener("click", () => {
   const token = sessionStorage.getItem("magic-token");
   if (!token) {
-    alert("Faça login para acessar o Metaverso.");
+    alert("Sessão expirada. Faça login novamente.");
     return;
   }
   document.getElementById("metaverso-modal").style.display = "flex";
