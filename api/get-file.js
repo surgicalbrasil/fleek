@@ -75,7 +75,7 @@ export default async function handler(req, res) {
     }
 
     // Buscar e descriptografar o arquivo
-    const encryptedFileUrl = process.env.ENCRYPTED_FILE_URL || "https://bafkreia257vpbhjqetv4tysdojtc7j5blern74nnj4fv3k57yimezp35oq.ipfs.flk-ipfs.xyz";
+    const encryptedFileUrl = process.env.ENCRYPTED_FILE_URL || "https://github.com/surgicalbrasil/Encrypted/raw/refs/heads/main/Paper.encrypted";
     const response = await fetch(encryptedFileUrl);
 
     if (!response.ok) {
