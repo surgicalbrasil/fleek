@@ -5,7 +5,7 @@ import Cors from 'cors';
 // Configuração do CORS para permitir apenas o domínio do frontend
 const cors = Cors({
   methods: ['GET', 'OPTIONS'],
-  origin: 'https://surgical-brasil.on-fleek.app',
+  origin: 'https://surgicalbrasil.github.io/fleek/',
 });
 
 export default async function handler(req, res) {
