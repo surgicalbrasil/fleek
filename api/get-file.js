@@ -8,7 +8,7 @@ import Cors from 'cors';
 // Inicializa o middleware CORS para permitir apenas o domínio especificado
 const cors = Cors({
   methods: ['POST', 'OPTIONS'], // Métodos permitidos
-  origin: 'https://surgical-brasil.on-fleek.app', // Permitir apenas o domínio especificado
+  origin: 'https://surgicalbrasil.github.io/fleek/', // Permitir apenas o domínio especificado
   allowedHeaders: ['Content-Type'], // Cabeçalhos permitidos
 });
 
