@@ -28,6 +28,9 @@ body {
 }
 
 .auth-toggle {
+  display: flex;
+  align-items: center;
+  gap: 8px;
   padding: 8px 16px;
   border: 1px solid #ccc;
   background: #f5f5f5;
@@ -40,6 +43,10 @@ body {
   background: #007bff;
   color: white;
   border-color: #0056b3;
+}
+
+.icon {
+  vertical-align: middle;
 }
 
 .auth-form {
@@ -59,6 +66,27 @@ body {
 #header input[type="email"]:focus {
   border-color: #007bff;
   outline: none;
+}
+
+.wallet-info {
+  display: none;
+  align-items: center;
+  background-color: #e9ecef;
+  padding: 8px 12px;
+  border-radius: 4px;
+  font-size: 14px;
+  max-width: 250px;
+  text-overflow: ellipsis;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.wallet-info.active {
+  display: flex;
+}
+
+#wallet-address {
+  font-family: monospace;
 }
 
 .button-group button {

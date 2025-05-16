@@ -28,23 +28,42 @@ export default async function handler(req, res) {
   if (req.method === "OPTIONS") {
     return res.status(200).end();
   }
-
   try {
-    const { token, fileName } = req.body;
+    const { token, authType, fileName, walletAddress } = req.body;
 
-    if (!token || !fileName) {
-      return res.status(400).json({ success: false, error: "Token e nome do arquivo são obrigatórios." });
+    if (!authType || !fileName) {
+      return res.status(400).json({ success: false, error: "Tipo de autenticação e nome do arquivo são obrigatórios." });
     }
+    
+    let userEmail = null;
+    let userWallet = null;
+    
+    // Validação baseada no tipo de autenticação
+    if (authType === 'email') {
+      if (!token) {
+        return res.status(400).json({ success: false, error: "Token é obrigatório para autenticação por email." });
+      }
+      
+      // Magic SDK: Validação do token
+      const magic = new Magic(process.env.MAGIC_SECRET_KEY);
+      const metadata = await magic.users.getMetadataByToken(token);
 
-    // Magic SDK: Validação do token
-    const magic = new Magic(process.env.MAGIC_SECRET_KEY);
-    const metadata = await magic.users.getMetadataByToken(token);
+      if (!metadata || !metadata.email) {
+        return res.status(401).json({ success: false, error: "Token inválido ou expirado." });
+      }
 
-    if (!metadata || !metadata.email) {
-      return res.status(401).json({ success: false, error: "Token inválido ou expirado." });
+      userEmail = metadata.email.toLowerCase();
+    } 
+    else if (authType === 'wallet') {
+      if (!walletAddress) {
+        return res.status(400).json({ success: false, error: "Endereço da carteira é obrigatório para autenticação por wallet." });
+      }
+      
+      userWallet = walletAddress.toLowerCase();
     }
-
-    const userEmail = metadata.email.toLowerCase();
+    else {
+      return res.status(400).json({ success: false, error: "Tipo de autenticação inválido." });
+    }
 
     // Google Sheets: Configuração e leitura dos e-mails autorizados
     const credentials = JSON.parse(Buffer.from(process.env.GOOGLE_SHEETS_CREDENTIALS, 'base64').toString('utf-8'));
@@ -57,21 +76,42 @@ export default async function handler(req, res) {
 
     await client.authorize();
 
-    const sheets = google.sheets({ version: 'v4', auth: client });
-    const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-    const range = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!A:A";
+    const sheets = google.sheets({ version: 'v4', auth: client });    const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
+    
+    // Verificar autorização baseado no tipo de autenticação
+    if (authType === 'email') {
+      const emailRange = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!A:A";
+      const emailSheet = await sheets.spreadsheets.values.get({ 
+        spreadsheetId, 
+        range: emailRange 
+      });
+      
+      const emailRows = emailSheet.data.values;
+      if (!emailRows || emailRows.length === 0) {
+        return res.status(500).json({ success: false, error: "Nenhum dado encontrado na planilha de emails." });
+      }
 
-    const responseSheet = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-    const rows = responseSheet.data.values;
+      const authorizedEmailsFromSheet = emailRows.map(row => row[0].toLowerCase());
+      if (!authorizedEmailsFromSheet.includes(userEmail)) {
+        return res.status(403).json({ success: false, error: "Email não autorizado." });
+      }
+    } 
+    else if (authType === 'wallet') {
+      const walletRange = "Sheet1!B:B"; // Consultando a coluna B para wallets
+      const walletSheet = await sheets.spreadsheets.values.get({ 
+        spreadsheetId, 
+        range: walletRange 
+      });
+      
+      const walletRows = walletSheet.data.values;
+      if (!walletRows || walletRows.length === 0) {
+        return res.status(500).json({ success: false, error: "Nenhum dado encontrado na planilha de carteiras." });
+      }
 
-    if (!rows || rows.length === 0) {
-      return res.status(500).json({ success: false, error: "Nenhum dado encontrado na planilha." });
-    }
-
-    const authorizedEmailsFromSheet = rows.map(row => row[0].toLowerCase());
-
-    if (!authorizedEmailsFromSheet.includes(userEmail)) {
-      return res.status(403).json({ success: false, error: "Acesso negado." });
+      const authorizedWalletsFromSheet = walletRows.map(row => row[0].toLowerCase());
+      if (!authorizedWalletsFromSheet.includes(userWallet)) {
+        return res.status(403).json({ success: false, error: "Carteira não autorizada." });
+      }
     }
 
     // Buscar e descriptografar o arquivo

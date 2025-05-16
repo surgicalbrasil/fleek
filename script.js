@@ -46,6 +46,14 @@ document.querySelectorAll('.auth-toggle').forEach(button => {
     
     const emailForm = document.querySelector('.auth-form');
     emailForm.style.display = currentAuthMethod === 'email' ? 'block' : 'none';
+    
+    // Atualizar o texto do botão de login conforme o método
+    const loginButton = document.getElementById('login-button');
+    if (currentAuthMethod === 'email') {
+      loginButton.textContent = 'Fazer Login';
+    } else if (currentAuthMethod === 'wallet') {
+      loginButton.textContent = 'Conectar Carteira';
+    }
   });
 });
 
@@ -79,29 +87,49 @@ document.getElementById("login-button").addEventListener("click", async () => {
       console.error("Erro ao realizar login:", error);
       alert("Erro ao realizar login.");
     }
+  } else if (currentAuthMethod === 'wallet') {
+    // Conectar via carteira
+    await connectWallet();
   }
 });
 
 // Função para acessar o documento
 document.getElementById("acessar-arquivo").addEventListener("click", async () => {
   const authType = sessionStorage.getItem("auth-type");
-  const token = sessionStorage.getItem("magic-token");
   
-  if (!authType || !token) {
+  if (!authType) {
     alert("Sessão expirada. Faça login novamente.");
     return;
   }
-
+  
   try {
     console.log("Buscando o documento PDF...");
+    let requestBody = { 
+      authType,
+      fileName: "Paper.pdf" 
+    };
+    
+    // Adicionar os dados de autenticação dependendo do método
+    if (authType === "email") {
+      const token = sessionStorage.getItem("magic-token");
+      if (!token) {
+        alert("Sessão expirada. Faça login novamente.");
+        return;
+      }
+      requestBody.token = token;
+    } else if (authType === "wallet") {
+      const walletAddress = sessionStorage.getItem("wallet-address");
+      if (!walletAddress) {
+        alert("Carteira não conectada. Conecte sua carteira novamente.");
+        return;
+      }
+      requestBody.walletAddress = walletAddress;
+    }
+
     const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ 
-        token,
-        authType,
-        fileName: "Paper.pdf" 
-      }),
+      body: JSON.stringify(requestBody),
     });
 
     if (!response.ok) {
@@ -149,12 +177,26 @@ async function renderPDF(pdfBlob) {
 // Função para abrir o modal do Metaverso
 document.getElementById("cadastro-metaverso").addEventListener("click", () => {
   const authType = sessionStorage.getItem("auth-type");
-  const token = sessionStorage.getItem("magic-token");
   
-  if (!authType || !token) {
+  if (!authType) {
     alert("Sessão expirada. Faça login novamente.");
     return;
   }
+  
+  if (authType === "email") {
+    const token = sessionStorage.getItem("magic-token");
+    if (!token) {
+      alert("Sessão expirada. Faça login novamente.");
+      return;
+    }
+  } else if (authType === "wallet") {
+    const walletAddress = sessionStorage.getItem("wallet-address");
+    if (!walletAddress) {
+      alert("Carteira não conectada. Conecte sua carteira novamente.");
+      return;
+    }
+  }
+  
   document.getElementById("metaverso-modal").style.display = "flex";
 });
 
@@ -167,14 +209,29 @@ document.getElementById("close-modal").addEventListener("click", () => {
 document.getElementById("logout-button").addEventListener("click", async () => {
   try {
     console.log("Realizando logout...");
-    await magic.user.logout();
+    const authType = sessionStorage.getItem("auth-type");
+    
+    if (authType === "email") {
+      await magic.user.logout();
+    } else if (authType === "wallet") {
+      if (provider?.disconnect) {
+        await provider.disconnect();
+      }
+      web3Modal.clearCachedProvider();
+      provider = null;
+      web3Instance = null;
+    }
+    
+    // Limpar sessão e resetar UI
     sessionStorage.clear();
     document.getElementById("user-email").disabled = false;
     document.getElementById("user-email").value = "";
+    document.getElementById("login-button").disabled = false;
     document.querySelectorAll('.auth-toggle').forEach(btn => btn.classList.remove('active'));
     document.querySelector('[data-auth="email"]').classList.add('active');
     document.querySelector('.auth-form').style.display = 'block';
     currentAuthMethod = 'email';
+    
     alert("Logout realizado com sucesso!");
   } catch (error) {
     console.error("Erro ao realizar logout:", error);
@@ -190,38 +247,347 @@ window.addEventListener("click", (event) => {
   }
 });
 
-// Atualizar o Wallet Connect Provider para abrir um pop-up
-const walletConnectProvider = new WalletConnectProvider.default({
-  rpc: {
-    1: "https://eth-mainnet.alchemyapi.io/v2/rW3MzqivxqHlGZPwxSMCs0hherD2pFsH"
-  },
-  qrcode: false // Desativa o QR Code para abrir um pop-up
+// Configuração do Web3Modal com Alchemy
+const providerOptions = {
+  walletconnect: {
+    package: WalletConnectProvider.default,
+    options: {
+      rpc: {
+        1: "https://eth-mainnet.alchemyapi.io/v2/rW3MzqivxqHlGZPwxSMCs0hherD2pFsH"
+      }
+    }
+  }
+};
+
+// Inicializar Web3Modal
+const web3Modal = new Web3Modal({
+  cacheProvider: false,
+  providerOptions,
+  theme: {
+    background: "#f5f5f5",
+    main: "#007bff",
+    secondary: "#e9ecef",
+    border: "#ced4da",
+    hover: "#d3e5ff"
+  }
 });
 
-// Função para conectar a carteira com pop-up
-async function connectWallet() {
+// Variáveis para armazenar instâncias Web3
+let provider = null;
+let web3Instance = null;
+
+// Função para verificar se o endereço da carteira está autorizado
+async function isWalletAuthorized(address) {
   try {
-    console.log("Conectando carteira via Wallet Connect...");
-    await walletConnectProvider.enable();
-    const web3 = new Web3(walletConnectProvider);
+    console.log("Validando endereço de carteira no backend...");
+    const response = await fetch("https://fleek-nine.vercel.app/api/get-authorized-wallets");
+    if (!response.ok) {
+      throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
+    }
 
-    // Obter contas conectadas
-    const accounts = await web3.eth.getAccounts();
-    console.log("Carteira conectada:", accounts[0]);
+    const data = await response.json();
+    console.log("Resposta da API:", data);
 
-    // Salvar informações no sessionStorage
-    sessionStorage.setItem("auth-type", "wallet");
-    sessionStorage.setItem("wallet-address", accounts[0]);
+    // Verifica se a resposta contém a lista de carteiras
+    if (!data.wallets || !Array.isArray(data.wallets)) {
+      console.error("Formato inesperado do JSON retornado pelo backend:", data);
+      return false;
+    }
 
-    alert("Carteira conectada com sucesso!");
+    // Normaliza e verifica se o endereço está autorizado
+    const authorized = data.wallets.map(w => w.toLowerCase()).includes(address.toLowerCase());
+    console.log("Carteira autorizada?", authorized);
+    return authorized;
   } catch (error) {
-    console.error("Erro ao conectar a carteira:", error);
-    alert("Erro ao conectar a carteira. Tente novamente.");
+    console.error("Erro na validação da carteira:", error);
+    alert("Erro ao validar a carteira. Tente novamente mais tarde.");
+    return false;
   }
 }
 
-// Adicionar evento ao botão de login com Wallet
-const walletLoginButton = document.querySelector('[data-auth="wallet"]');
-if (walletLoginButton) {
-  walletLoginButton.addEventListener("click", connectWallet);
+// Função para conectar a carteira com Web3Modal
+async function connectWallet() {
+  try {
+    console.log("Conectando carteira via Web3Modal...");
+    
+    // Limpar cache do provider para evitar problemas 
+    web3Modal.clearCachedProvider();
+    
+    // Iniciar conexão 
+    provider = await web3Modal.connect();
+    
+    // Configurar web3 com Alchemy
+    try {
+      const alchemyProvider = new AlchemyWeb3.createAlchemyWeb3(
+        "https://eth-mainnet.alchemyapi.io/v2/rW3MzqivxqHlGZPwxSMCs0hherD2pFsH", 
+        { writeProvider: provider }
+      );
+      web3Instance = alchemyProvider;
+    } catch (err) {
+      console.error("Erro ao configurar Alchemy provider:", err);
+      // Fallback para Web3 padrão se o Alchemy falhar
+      web3Instance = new Web3(provider);
+    }
+    
+    // Obter contas conectadas
+    const accounts = await web3Instance.eth.getAccounts();
+    
+    if (accounts && accounts.length > 0) {
+      console.log("Carteira conectada:", accounts[0]);
+      
+      try {
+        // Verificar se a carteira está autorizada
+        const isAuthorized = await isWalletAuthorized(accounts[0]);
+        if (!isAuthorized) {
+          await disconnectWallet();
+          alert("Carteira não autorizada. Assine o NDA.");
+          return;
+        }
+
+        // Salvar informações no sessionStorage
+        sessionStorage.setItem("auth-type", "wallet");
+        sessionStorage.setItem("wallet-address", accounts[0]);
+
+        // Atualizar UI
+        document.getElementById("login-button").disabled = true;
+        document.getElementById("user-email").disabled = true;
+        
+        // Mostrar endereço da carteira na interface
+        const walletInfo = document.getElementById("wallet-info");
+        const walletAddressEl = document.getElementById("wallet-address");
+        walletInfo.classList.add("active");
+        walletAddressEl.textContent = formatWalletAddress(accounts[0]);
+
+        // Configurar eventos para o provider
+        if (provider.on) {
+          provider.on("accountsChanged", handleAccountsChanged);
+          provider.on("chainChanged", () => window.location.reload());
+          provider.on("disconnect", handleDisconnect);
+        }
+
+        alert("Carteira conectada com sucesso!");
+      } catch (authError) {
+        console.error("Erro na verificação de autorização:", authError);
+        await disconnectWallet();
+        alert("Erro ao verificar autorização da carteira. Tente novamente mais tarde.");
+      }
+    } else {
+      throw new Error("Não foi possível obter o endereço da carteira");
+    }
+  } catch (error) {
+    console.error("Erro ao conectar a carteira:", error);
+    if (error.message.includes("User rejected")) {
+      alert("Conexão cancelada pelo usuário.");
+    } else {
+      alert("Erro ao conectar a carteira. Tente novamente.");
+    }
+  }
 }
+
+// Função auxiliar para desconexão segura da carteira
+async function disconnectWallet() {
+  try {
+    if (provider?.disconnect) {
+      await provider.disconnect();
+    }
+    web3Modal.clearCachedProvider();
+    provider = null;
+    web3Instance = null;
+    
+    // Limpar UI
+    const walletInfo = document.getElementById("wallet-info");
+    walletInfo.classList.remove("active");
+    document.getElementById("wallet-address").textContent = "";
+  } catch (err) {
+    console.error("Erro ao desconectar carteira:", err);
+  }
+}
+
+// Função para verificar se o endereço da carteira está autorizado
+async function isWalletAuthorized(address) {
+  try {
+    console.log("Validando endereço de carteira no backend...");
+    const response = await fetch("https://fleek-nine.vercel.app/api/get-authorized-wallets");
+    if (!response.ok) {
+      throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log("Resposta da API:", data);
+
+    // Verifica se a resposta contém a lista de carteiras
+    if (!data.wallets || !Array.isArray(data.wallets)) {
+      console.error("Formato inesperado do JSON retornado pelo backend:", data);
+      return false;
+    }
+
+    // Normaliza e verifica se o endereço está autorizado
+    const authorized = data.wallets.map(w => w.toLowerCase()).includes(address.toLowerCase());
+    console.log("Carteira autorizada?", authorized);
+    return authorized;
+  } catch (error) {
+    console.error("Erro na validação da carteira:", error);
+    alert("Erro ao validar a carteira. Tente novamente mais tarde.");
+    return false;
+  }
+}
+
+// Função para conectar a carteira com Web3Modal
+async function connectWallet() {
+  try {
+    console.log("Conectando carteira via Web3Modal...");
+    
+    // Limpar cache do provider para evitar problemas 
+    web3Modal.clearCachedProvider();
+    
+    // Iniciar conexão 
+    provider = await web3Modal.connect();
+    
+    // Configurar web3 com Alchemy
+    try {
+      const alchemyProvider = new AlchemyWeb3.createAlchemyWeb3(
+        "https://eth-mainnet.alchemyapi.io/v2/rW3MzqivxqHlGZPwxSMCs0hherD2pFsH", 
+        { writeProvider: provider }
+      );
+      web3Instance = alchemyProvider;
+    } catch (err) {
+      console.error("Erro ao configurar Alchemy provider:", err);
+      // Fallback para Web3 padrão se o Alchemy falhar
+      web3Instance = new Web3(provider);
+    }
+    
+    // Obter contas conectadas
+    const accounts = await web3Instance.eth.getAccounts();
+    
+    if (accounts && accounts.length > 0) {
+      console.log("Carteira conectada:", accounts[0]);
+      
+      try {
+        // Verificar se a carteira está autorizada
+        const isAuthorized = await isWalletAuthorized(accounts[0]);
+        if (!isAuthorized) {
+          await disconnectWallet();
+          alert("Carteira não autorizada. Assine o NDA.");
+          return;
+        }
+
+        // Salvar informações no sessionStorage
+        sessionStorage.setItem("auth-type", "wallet");
+        sessionStorage.setItem("wallet-address", accounts[0]);
+
+        // Atualizar UI
+        document.getElementById("login-button").disabled = true;
+        document.getElementById("user-email").disabled = true;
+        
+        // Mostrar endereço da carteira na interface
+        const walletInfo = document.getElementById("wallet-info");
+        const walletAddressEl = document.getElementById("wallet-address");
+        walletInfo.classList.add("active");
+        walletAddressEl.textContent = formatWalletAddress(accounts[0]);
+
+        // Configurar eventos para o provider
+        if (provider.on) {
+          provider.on("accountsChanged", handleAccountsChanged);
+          provider.on("chainChanged", () => window.location.reload());
+          provider.on("disconnect", handleDisconnect);
+        }
+
+        alert("Carteira conectada com sucesso!");
+      } catch (authError) {
+        console.error("Erro na verificação de autorização:", authError);
+        await disconnectWallet();
+        alert("Erro ao verificar autorização da carteira. Tente novamente mais tarde.");
+      }
+    } else {
+      throw new Error("Não foi possível obter o endereço da carteira");
+    }
+  } catch (error) {
+    console.error("Erro ao conectar a carteira:", error);
+    if (error.message.includes("User rejected")) {
+      alert("Conexão cancelada pelo usuário.");
+    } else {
+      alert("Erro ao conectar a carteira. Tente novamente.");
+    }
+  }
+}
+
+// Função auxiliar para desconexão segura da carteira
+async function disconnectWallet() {
+  try {
+    if (provider?.disconnect) {
+      await provider.disconnect();
+    }
+    web3Modal.clearCachedProvider();
+    provider = null;
+    web3Instance = null;
+    
+    // Limpar UI
+    const walletInfo = document.getElementById("wallet-info");
+    walletInfo.classList.remove("active");
+    document.getElementById("wallet-address").textContent = "";
+  } catch (err) {
+    console.error("Erro ao desconectar carteira:", err);
+  }
+}
+
+// Função para formatar o endereço da carteira (exibir de forma abreviada)
+function formatWalletAddress(address) {
+  if (!address) return "";
+  if (address.length < 12) return address;
+  return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+}
+
+// Função para inicializar a aplicação
+async function initializeApp() {
+  console.log("Inicializando aplicação...");
+  
+  // Verificar se já existe uma sessão ativa
+  const authType = sessionStorage.getItem("auth-type");
+  
+  if (authType === "email") {
+    // Verificar se o token ainda é válido
+    const token = sessionStorage.getItem("magic-token");
+    if (token) {
+      try {
+        // Tentar fazer uma operação simples para verificar o token
+        const isLoggedIn = await magic.user.isLoggedIn();
+        if (isLoggedIn) {
+          console.log("Sessão de email válida");
+          document.getElementById("user-email").disabled = true;
+          document.getElementById("login-button").disabled = true;
+        } else {
+          console.log("Sessão de email expirada");
+          sessionStorage.clear();
+        }
+      } catch (error) {
+        console.error("Erro ao verificar sessão de email:", error);
+        sessionStorage.clear();
+      }
+    } else {
+      sessionStorage.clear();
+    }
+  } else if (authType === "wallet") {
+    const walletAddress = sessionStorage.getItem("wallet-address");
+    
+    if (walletAddress) {
+      console.log("Restaurando sessão de carteira:", walletAddress);
+      document.querySelectorAll('.auth-toggle').forEach(btn => btn.classList.remove('active'));
+      document.querySelector('[data-auth="wallet"]').classList.add('active');
+      document.querySelector('.auth-form').style.display = 'none';
+      document.getElementById("login-button").textContent = 'Conectar Carteira';
+      document.getElementById("login-button").disabled = true;
+      currentAuthMethod = 'wallet';
+      
+      // Mostrar endereço da carteira na interface
+      const walletInfo = document.getElementById("wallet-info");
+      const walletAddressEl = document.getElementById("wallet-address");
+      walletInfo.classList.add("active");
+      walletAddressEl.textContent = formatWalletAddress(walletAddress);
+    } else {
+      sessionStorage.clear();
+    }
+  }
+}
+
+// Inicializar a aplicação quando o DOM estiver carregado
+document.addEventListener("DOMContentLoaded", initializeApp);
