@@ -92,39 +92,13 @@ async function isWalletAuthorized(walletAddress) {
 
 // Configurar os botões de alternância de autenticação
 document.querySelectorAll('.auth-toggle').forEach(button => {
-  button.addEventListener('click', async () => {
+  button.addEventListener('click', () => {
     document.querySelectorAll('.auth-toggle').forEach(btn => btn.classList.remove('active'));
     button.classList.add('active');
     currentAuthMethod = button.dataset.auth;
     
     const emailForm = document.querySelector('.auth-form');
-    emailForm.style.display = currentAuthMethod === 'email' ? 'flex' : 'none';
-    
-    // Se alternou para wallet, tenta conectar imediatamente
-    if (currentAuthMethod === 'wallet') {
-      try {
-        console.log("Conectando wallet...");
-        provider = await web3Modal.connect();
-        web3 = new Web3(provider);
-        
-        const accounts = await web3.eth.getAccounts();
-        account = accounts[0];
-
-        // Verificar se a wallet está autorizada
-        const isAuthorized = await isWalletAuthorized(account);
-        if (!isAuthorized) {
-          alert("Wallet não autorizada. Assine o NDA.");
-          return;
-        }
-        
-        sessionStorage.setItem("auth-type", "wallet");
-        sessionStorage.setItem("wallet-address", account);
-        alert("Login realizado com sucesso via wallet!");
-      } catch (error) {
-        console.error("Erro ao conectar wallet:", error);
-        alert("Erro ao realizar login com wallet.");
-      }
-    }
+    emailForm.style.display = currentAuthMethod === 'email' ? 'block' : 'none';
   });
 });
 
@@ -157,6 +131,58 @@ document.getElementById("login-button").addEventListener("click", async () => {
     } catch (error) {
       console.error("Erro ao realizar login:", error);
       alert("Erro ao realizar login.");
+    }
+  } else if (currentAuthMethod === 'wallet') {
+    try {
+      console.log("Conectando wallet...");
+      provider = await web3Modal.connect();
+      web3 = new Web3(provider);
+      
+      const accounts = await web3.eth.getAccounts();
+      account = accounts[0];
+
+      // Verificar se a wallet está autorizada
+      const isAuthorized = await isWalletAuthorized(account);
+      if (!isAuthorized) {
+        alert("Wallet não autorizada. Assine o NDA.");
+        await provider.close();
+        await web3Modal.clearCachedProvider();
+        provider = null;
+        web3 = null;
+        account = null;
+        return;
+      }
+      
+      sessionStorage.setItem("auth-type", "wallet");
+      sessionStorage.setItem("wallet-address", account);
+      alert("Login realizado com sucesso via wallet!");
+
+      // Configurar listener para eventos da wallet
+      provider.on("accountsChanged", async (accounts) => {
+        if (accounts.length === 0) {
+          // Usuário desconectou a wallet
+          await provider.close();
+          await web3Modal.clearCachedProvider();
+          provider = null;
+          web3 = null;
+          account = null;
+          sessionStorage.clear();
+          alert("Wallet desconectada.");
+        }
+      });
+
+      provider.on("disconnect", async () => {
+        // Wallet desconectada
+        provider = null;
+        web3 = null;
+        account = null;
+        sessionStorage.clear();
+        alert("Wallet desconectada.");
+      });
+
+    } catch (error) {
+      console.error("Erro ao conectar wallet:", error);
+      alert("Erro ao realizar login com wallet.");
     }
   }
 });
