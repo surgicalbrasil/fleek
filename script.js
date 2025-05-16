@@ -30,11 +30,18 @@ let account = null;
 // Configurar o worker do PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
+// Função para mostrar mensagens de erro/sucesso
+function showMessage(message, isError = false) {
+  console.log(isError ? 'Erro:' : 'Sucesso:', message);
+  window.alert(message);
+}
+
 // Função para verificar se o e-mail está autorizado no backend
 async function isEmailAuthorized(email) {
   try {
     console.log("Validando e-mail no backend...");
     const response = await fetch("https://fleek-nine.vercel.app/api/get-authorized-emails");
+    
     if (!response.ok) {
       throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
     }
@@ -42,20 +49,17 @@ async function isEmailAuthorized(email) {
     const data = await response.json();
     console.log("Resposta da API:", data);
 
-    // Verifica se a resposta contém a lista de e-mails
     if (!data.emails || !Array.isArray(data.emails)) {
-      console.error("Formato inesperado do JSON retornado pelo backend:", data);
-      return false;
+      throw new Error("Formato inesperado do JSON retornado pelo backend");
     }
 
-    // Normaliza e verifica se o e-mail está autorizado
     const authorized = data.emails.map(e => e.toLowerCase()).includes(email.toLowerCase());
     console.log("E-mail autorizado?", authorized);
     return authorized;
 
   } catch (error) {
     console.error("Erro na validação do e-mail:", error);
-    alert("Erro ao validar o e-mail. Tente novamente mais tarde.");
+    showMessage("Erro ao validar o e-mail. Tente novamente mais tarde.", true);
     return false;
   }
 }
@@ -65,6 +69,7 @@ async function isWalletAuthorized(walletAddress) {
   try {
     console.log("Validando wallet no backend...");
     const response = await fetch("https://fleek-nine.vercel.app/api/get-authorized-wallets");
+    
     if (!response.ok) {
       throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
     }
@@ -72,133 +77,177 @@ async function isWalletAuthorized(walletAddress) {
     const data = await response.json();
     console.log("Resposta da API:", data);
 
-    // Verifica se a resposta contém a lista de wallets
     if (!data.wallets || !Array.isArray(data.wallets)) {
-      console.error("Formato inesperado do JSON retornado pelo backend:", data);
-      return false;
+      throw new Error("Formato inesperado do JSON retornado pelo backend");
     }
 
-    // Normaliza e verifica se a wallet está autorizada
     const authorized = data.wallets.map(w => w.toLowerCase()).includes(walletAddress.toLowerCase());
     console.log("Wallet autorizada?", authorized);
     return authorized;
 
   } catch (error) {
     console.error("Erro na validação da wallet:", error);
-    alert("Erro ao validar a wallet. Tente novamente mais tarde.");
+    showMessage("Erro ao validar a wallet. Tente novamente mais tarde.", true);
     return false;
   }
 }
 
+// Função para limpar o estado da wallet
+async function clearWalletState() {
+  if (provider?.close) {
+    try {
+      await provider.close();
+    } catch (e) {
+      console.error("Erro ao fechar provider:", e);
+    }
+  }
+  
+  try {
+    await web3Modal.clearCachedProvider();
+  } catch (e) {
+    console.error("Erro ao limpar cache do provider:", e);
+  }
+  
+  provider = null;
+  web3 = null;
+  account = null;
+}
+
 // Configurar os botões de alternância de autenticação
 document.querySelectorAll('.auth-toggle').forEach(button => {
-  button.addEventListener('click', () => {
-    document.querySelectorAll('.auth-toggle').forEach(btn => btn.classList.remove('active'));
-    button.classList.add('active');
-    currentAuthMethod = button.dataset.auth;
-    
-    const emailForm = document.querySelector('.auth-form');
-    emailForm.style.display = currentAuthMethod === 'email' ? 'block' : 'none';
+  button.addEventListener('click', async () => {
+    try {
+      // Remover classe active de todos os botões
+      document.querySelectorAll('.auth-toggle').forEach(btn => btn.classList.remove('active'));
+      
+      // Adicionar classe active ao botão clicado
+      button.classList.add('active');
+      
+      // Atualizar método de autenticação
+      currentAuthMethod = button.dataset.auth;
+      
+      // Mostrar/esconder formulário de email
+      const emailForm = document.querySelector('.auth-form');
+      if (emailForm) {
+        emailForm.style.display = currentAuthMethod === 'email' ? 'flex' : 'none';
+      }
+
+      // Se mudar para wallet e já estiver conectado, limpar o estado
+      if (currentAuthMethod === 'wallet' && provider) {
+        await clearWalletState();
+      }
+
+      console.log('Método de autenticação alterado para:', currentAuthMethod);
+    } catch (error) {
+      console.error('Erro ao alternar método de autenticação:', error);
+      showMessage('Erro ao alternar método de autenticação. Tente novamente.', true);
+    }
   });
 });
 
 // Handler do botão de login
 document.getElementById("login-button").addEventListener("click", async () => {
-  if (currentAuthMethod === 'email') {
-    const emailInput = document.getElementById("user-email");
-    const email = emailInput.value.trim();
+  try {
+    if (currentAuthMethod === 'email') {
+      const emailInput = document.getElementById("user-email");
+      const email = emailInput.value.trim();
 
-    if (!email) {
-      alert("Por favor, insira um e-mail válido.");
-      emailInput.focus();
-      return;
-    }
+      if (!email) {
+        showMessage("Por favor, insira um e-mail válido.", true);
+        emailInput.focus();
+        return;
+      }
 
-    const isAuthorized = await isEmailAuthorized(email);
-    if (!isAuthorized) {
-      alert("E-mail não autorizado. Assine o NDA.");
-      return;
-    }
+      const isAuthorized = await isEmailAuthorized(email);
+      if (!isAuthorized) {
+        showMessage("E-mail não autorizado. Assine o NDA.", true);
+        return;
+      }
 
-    try {
       console.log("Realizando login com email...");
       await magic.auth.loginWithMagicLink({ email });
       const token = await magic.user.getIdToken();
+      
       sessionStorage.setItem("auth-type", "email");
       sessionStorage.setItem("magic-token", token);
       document.getElementById("user-email").disabled = true;
-      alert("Login realizado com sucesso!");
-    } catch (error) {
-      console.error("Erro ao realizar login:", error);
-      alert("Erro ao realizar login.");
-    }
-  } else if (currentAuthMethod === 'wallet') {
-    try {
+      
+      showMessage("Login realizado com sucesso!");
+      
+    } else if (currentAuthMethod === 'wallet') {
+      if (!web3Modal) {
+        showMessage("Web3Modal não está inicializado.", true);
+        return;
+      }
+
       console.log("Conectando wallet...");
       provider = await web3Modal.connect();
-      web3 = new Web3(provider);
       
-      const accounts = await web3.eth.getAccounts();
-      account = accounts[0];
+      if (!provider) {
+        showMessage("Não foi possível conectar à wallet.", true);
+        return;
+      }
 
-      // Verificar se a wallet está autorizada
+      web3 = new Web3(provider);
+      const accounts = await web3.eth.getAccounts();
+      
+      if (!accounts || accounts.length === 0) {
+        showMessage("Nenhuma conta encontrada.", true);
+        await clearWalletState();
+        return;
+      }
+
+      account = accounts[0];
+      console.log("Conta conectada:", account);
+
       const isAuthorized = await isWalletAuthorized(account);
       if (!isAuthorized) {
-        alert("Wallet não autorizada. Assine o NDA.");
-        await provider.close();
-        await web3Modal.clearCachedProvider();
-        provider = null;
-        web3 = null;
-        account = null;
+        showMessage("Wallet não autorizada. Assine o NDA.", true);
+        await clearWalletState();
         return;
       }
       
       sessionStorage.setItem("auth-type", "wallet");
       sessionStorage.setItem("wallet-address", account);
-      alert("Login realizado com sucesso via wallet!");
+      showMessage("Login realizado com sucesso via wallet!");
 
-      // Configurar listener para eventos da wallet
+      // Configurar listeners para eventos da wallet
       provider.on("accountsChanged", async (accounts) => {
         if (accounts.length === 0) {
-          // Usuário desconectou a wallet
-          await provider.close();
-          await web3Modal.clearCachedProvider();
-          provider = null;
-          web3 = null;
-          account = null;
+          await clearWalletState();
           sessionStorage.clear();
-          alert("Wallet desconectada.");
+          showMessage("Wallet desconectada.");
         }
       });
 
       provider.on("disconnect", async () => {
-        // Wallet desconectada
-        provider = null;
-        web3 = null;
-        account = null;
+        await clearWalletState();
         sessionStorage.clear();
-        alert("Wallet desconectada.");
+        showMessage("Wallet desconectada.");
       });
-
-    } catch (error) {
-      console.error("Erro ao conectar wallet:", error);
-      alert("Erro ao realizar login com wallet.");
+    }
+  } catch (error) {
+    console.error("Erro durante o login:", error);
+    showMessage(error.message || "Erro durante o login. Tente novamente.", true);
+    
+    if (currentAuthMethod === 'wallet') {
+      await clearWalletState();
     }
   }
 });
 
 // Função para acessar o documento
 document.getElementById("acessar-arquivo").addEventListener("click", async () => {
-  const authType = sessionStorage.getItem("auth-type");
-  const token = sessionStorage.getItem("magic-token");
-  const walletAddress = sessionStorage.getItem("wallet-address");
-  
-  if (!authType || (!token && !walletAddress)) {
-    alert("Sessão expirada. Faça login novamente.");
-    return;
-  }
-
   try {
+    const authType = sessionStorage.getItem("auth-type");
+    const token = sessionStorage.getItem("magic-token");
+    const walletAddress = sessionStorage.getItem("wallet-address");
+    
+    if (!authType || (!token && !walletAddress)) {
+      showMessage("Sessão expirada. Faça login novamente.", true);
+      return;
+    }
+
     console.log("Buscando o documento PDF...");
     const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
       method: "POST",
@@ -217,10 +266,10 @@ document.getElementById("acessar-arquivo").addEventListener("click", async () =>
 
     const pdfBlob = await response.blob();
     console.log("Documento PDF recebido:", pdfBlob);
-    renderPDF(pdfBlob);
+    await renderPDF(pdfBlob);
   } catch (error) {
     console.error("Erro ao carregar o documento:", error);
-    alert("Erro ao acessar o documento.");
+    showMessage("Erro ao acessar o documento.", true);
   }
 });
 
@@ -249,21 +298,27 @@ async function renderPDF(pdfBlob) {
     }
   } catch (error) {
     console.error("Erro ao renderizar o PDF:", error);
-    alert("Erro ao renderizar o PDF.");
+    showMessage("Erro ao renderizar o PDF.", true);
   }
 }
 
 // Função para abrir o modal do Metaverso
 document.getElementById("cadastro-metaverso").addEventListener("click", () => {
-  const authType = sessionStorage.getItem("auth-type");
-  const token = sessionStorage.getItem("magic-token");
-  const walletAddress = sessionStorage.getItem("wallet-address");
-  
-  if (!authType || (!token && !walletAddress)) {
-    alert("Sessão expirada. Faça login novamente.");
-    return;
+  try {
+    const authType = sessionStorage.getItem("auth-type");
+    const token = sessionStorage.getItem("magic-token");
+    const walletAddress = sessionStorage.getItem("wallet-address");
+    
+    if (!authType || (!token && !walletAddress)) {
+      showMessage("Sessão expirada. Faça login novamente.", true);
+      return;
+    }
+    
+    document.getElementById("metaverso-modal").style.display = "flex";
+  } catch (error) {
+    console.error("Erro ao abrir modal do metaverso:", error);
+    showMessage("Erro ao abrir modal do metaverso.", true);
   }
-  document.getElementById("metaverso-modal").style.display = "flex";
 });
 
 // Função para fechar o modal
@@ -280,18 +335,13 @@ document.getElementById("logout-button").addEventListener("click", async () => {
     if (authType === "email") {
       await magic.user.logout();
     } else if (authType === "wallet") {
-      if (provider?.close) {
-        await provider.close();
-      }
-      await web3Modal.clearCachedProvider();
-      provider = null;
-      web3 = null;
-      account = null;
+      await clearWalletState();
     }
     
     sessionStorage.clear();
     document.getElementById("user-email").disabled = false;
     document.getElementById("user-email").value = "";
+    
     document.querySelectorAll('.auth-toggle').forEach(btn => {
       btn.classList.remove('active');
     });
@@ -299,10 +349,10 @@ document.getElementById("logout-button").addEventListener("click", async () => {
     document.querySelector('.auth-form').style.display = 'block';
     currentAuthMethod = 'email';
     
-    alert("Logout realizado com sucesso!");
+    showMessage("Logout realizado com sucesso!");
   } catch (error) {
     console.error("Erro ao realizar logout:", error);
-    alert("Erro ao realizar logout.");
+    showMessage("Erro ao realizar logout.", true);
   }
 });
 
