@@ -4,6 +4,29 @@ const magic = new Magic("pk_live_20134EF9B8F26232");
 // Estado da autenticação
 let currentAuthMethod = 'email';
 
+// Inicializar o Web3Modal com Alchemy
+const web3Modal = new Web3Modal({
+  network: "mainnet",
+  cacheProvider: true,
+  providerOptions: {
+    walletconnect: {
+      package: WalletConnectProvider,
+      options: {
+        rpc: {
+          1: `https://eth-mainnet.g.alchemy.com/v2/rW3MzqivxqHlGZPwxSMCs0hherD2pFsH`,
+          5: `https://eth-goerli.g.alchemy.com/v2/rW3MzqivxqHlGZPwxSMCs0hherD2pFsH`,
+          11155111: `https://eth-sepolia.g.alchemy.com/v2/rW3MzqivxqHlGZPwxSMCs0hherD2pFsH`
+        }
+      }
+    }
+  }
+});
+
+// Variáveis para WalletConnect
+let provider = null;
+let web3 = null;
+let account = null;
+
 // Configurar o worker do PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
@@ -33,6 +56,36 @@ async function isEmailAuthorized(email) {
   } catch (error) {
     console.error("Erro na validação do e-mail:", error);
     alert("Erro ao validar o e-mail. Tente novamente mais tarde.");
+    return false;
+  }
+}
+
+// Função para verificar se a wallet está autorizada no backend
+async function isWalletAuthorized(walletAddress) {
+  try {
+    console.log("Validando wallet no backend...");
+    const response = await fetch("https://fleek-nine.vercel.app/api/get-authorized-wallets");
+    if (!response.ok) {
+      throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
+    }
+
+    const data = await response.json();
+    console.log("Resposta da API:", data);
+
+    // Verifica se a resposta contém a lista de wallets
+    if (!data.wallets || !Array.isArray(data.wallets)) {
+      console.error("Formato inesperado do JSON retornado pelo backend:", data);
+      return false;
+    }
+
+    // Normaliza e verifica se a wallet está autorizada
+    const authorized = data.wallets.map(w => w.toLowerCase()).includes(walletAddress.toLowerCase());
+    console.log("Wallet autorizada?", authorized);
+    return authorized;
+
+  } catch (error) {
+    console.error("Erro na validação da wallet:", error);
+    alert("Erro ao validar a wallet. Tente novamente mais tarde.");
     return false;
   }
 }
@@ -87,6 +140,13 @@ document.getElementById("login-button").addEventListener("click", async () => {
       
       const accounts = await web3.eth.getAccounts();
       account = accounts[0];
+
+      // Verificar se a wallet está autorizada
+      const isAuthorized = await isWalletAuthorized(account);
+      if (!isAuthorized) {
+        alert("Wallet não autorizada. Assine o NDA.");
+        return;
+      }
       
       sessionStorage.setItem("auth-type", "wallet");
       sessionStorage.setItem("wallet-address", account);
@@ -166,8 +226,11 @@ async function renderPDF(pdfBlob) {
 
 // Função para abrir o modal do Metaverso
 document.getElementById("cadastro-metaverso").addEventListener("click", () => {
+  const authType = sessionStorage.getItem("auth-type");
   const token = sessionStorage.getItem("magic-token");
-  if (!token) {
+  const walletAddress = sessionStorage.getItem("wallet-address");
+  
+  if (!authType || (!token && !walletAddress)) {
     alert("Sessão expirada. Faça login novamente.");
     return;
   }
