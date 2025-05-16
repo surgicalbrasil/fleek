@@ -189,3 +189,39 @@ window.addEventListener("click", (event) => {
     modal.style.display = "none";
   }
 });
+
+// Atualizar o Wallet Connect Provider para abrir um pop-up
+const walletConnectProvider = new WalletConnectProvider.default({
+  rpc: {
+    1: "https://eth-mainnet.alchemyapi.io/v2/rW3MzqivxqHlGZPwxSMCs0hherD2pFsH"
+  },
+  qrcode: false // Desativa o QR Code para abrir um pop-up
+});
+
+// Função para conectar a carteira com pop-up
+async function connectWallet() {
+  try {
+    console.log("Conectando carteira via Wallet Connect...");
+    await walletConnectProvider.enable();
+    const web3 = new Web3(walletConnectProvider);
+
+    // Obter contas conectadas
+    const accounts = await web3.eth.getAccounts();
+    console.log("Carteira conectada:", accounts[0]);
+
+    // Salvar informações no sessionStorage
+    sessionStorage.setItem("auth-type", "wallet");
+    sessionStorage.setItem("wallet-address", accounts[0]);
+
+    alert("Carteira conectada com sucesso!");
+  } catch (error) {
+    console.error("Erro ao conectar a carteira:", error);
+    alert("Erro ao conectar a carteira. Tente novamente.");
+  }
+}
+
+// Adicionar evento ao botão de login com Wallet
+const walletLoginButton = document.querySelector('[data-auth="wallet"]');
+if (walletLoginButton) {
+  walletLoginButton.addEventListener("click", connectWallet);
+}
