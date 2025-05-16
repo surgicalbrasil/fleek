@@ -214,12 +214,7 @@ document.getElementById("logout-button").addEventListener("click", async () => {
     if (authType === "email") {
       await magic.user.logout();
     } else if (authType === "wallet") {
-      if (provider?.disconnect) {
-        await provider.disconnect();
-      }
-      web3Modal.clearCachedProvider();
-      provider = null;
-      web3Instance = null;
+      await disconnectWallet();
     }
     
     // Limpar sessão e resetar UI
@@ -247,34 +242,8 @@ window.addEventListener("click", (event) => {
   }
 });
 
-// Configuração do Web3Modal com Alchemy
-const providerOptions = {
-  walletconnect: {
-    package: WalletConnectProvider.default,
-    options: {
-      rpc: {
-        1: "https://eth-mainnet.alchemyapi.io/v2/rW3MzqivxqHlGZPwxSMCs0hherD2pFsH"
-      }
-    }
-  }
-};
-
-// Inicializar Web3Modal
-const web3Modal = new Web3Modal({
-  cacheProvider: false,
-  providerOptions,
-  theme: {
-    background: "#f5f5f5",
-    main: "#007bff",
-    secondary: "#e9ecef",
-    border: "#ced4da",
-    hover: "#d3e5ff"
-  }
-});
-
-// Variáveis para armazenar instâncias Web3
-let provider = null;
-let web3Instance = null;
+// Variáveis para utilização do módulo wallet-connect.js
+const walletConnect = window.walletConnect;
 
 // Função para verificar se o endereço da carteira está autorizado
 async function isWalletAuthorized(address) {
@@ -305,78 +274,56 @@ async function isWalletAuthorized(address) {
   }
 }
 
-// Função para conectar a carteira com Web3Modal
+// Função para conectar a carteira usando o módulo wallet-connect.js
 async function connectWallet() {
   try {
-    console.log("Conectando carteira via Web3Modal...");
+    console.log("Conectando carteira via wallet-connect.js...");
     
-    // Limpar cache do provider para evitar problemas 
-    web3Modal.clearCachedProvider();
+    // Chamar a função de conexão do módulo wallet-connect.js
+    const connection = await walletConnect.connect();
     
-    // Iniciar conexão 
-    provider = await web3Modal.connect();
-    
-    // Configurar web3 com Alchemy
-    try {
-      const alchemyProvider = new AlchemyWeb3.createAlchemyWeb3(
-        "https://eth-mainnet.alchemyapi.io/v2/rW3MzqivxqHlGZPwxSMCs0hherD2pFsH", 
-        { writeProvider: provider }
-      );
-      web3Instance = alchemyProvider;
-    } catch (err) {
-      console.error("Erro ao configurar Alchemy provider:", err);
-      // Fallback para Web3 padrão se o Alchemy falhar
-      web3Instance = new Web3(provider);
+    if (!connection || !connection.account) {
+      throw new Error("Falha na conexão com a carteira");
     }
     
-    // Obter contas conectadas
-    const accounts = await web3Instance.eth.getAccounts();
+    console.log("Carteira conectada:", connection.account);
     
-    if (accounts && accounts.length > 0) {
-      console.log("Carteira conectada:", accounts[0]);
-      
-      try {
-        // Verificar se a carteira está autorizada
-        const isAuthorized = await isWalletAuthorized(accounts[0]);
-        if (!isAuthorized) {
-          await disconnectWallet();
-          alert("Carteira não autorizada. Assine o NDA.");
-          return;
-        }
-
-        // Salvar informações no sessionStorage
-        sessionStorage.setItem("auth-type", "wallet");
-        sessionStorage.setItem("wallet-address", accounts[0]);
-
-        // Atualizar UI
-        document.getElementById("login-button").disabled = true;
-        document.getElementById("user-email").disabled = true;
-        
-        // Mostrar endereço da carteira na interface
-        const walletInfo = document.getElementById("wallet-info");
-        const walletAddressEl = document.getElementById("wallet-address");
-        walletInfo.classList.add("active");
-        walletAddressEl.textContent = formatWalletAddress(accounts[0]);
-
-        // Configurar eventos para o provider
-        if (provider.on) {
-          provider.on("accountsChanged", handleAccountsChanged);
-          provider.on("chainChanged", () => window.location.reload());
-          provider.on("disconnect", handleDisconnect);
-        }
-
-        alert("Carteira conectada com sucesso!");
-      } catch (authError) {
-        console.error("Erro na verificação de autorização:", authError);
-        await disconnectWallet();
-        alert("Erro ao verificar autorização da carteira. Tente novamente mais tarde.");
+    try {
+      // Verificar se a carteira está autorizada
+      const isAuthorized = await isWalletAuthorized(connection.account);
+      if (!isAuthorized) {
+        await walletConnect.disconnect();
+        alert("Carteira não autorizada. Assine o NDA.");
+        return;
       }
-    } else {
-      throw new Error("Não foi possível obter o endereço da carteira");
+
+      // Salvar informações no sessionStorage
+      sessionStorage.setItem("auth-type", "wallet");
+      sessionStorage.setItem("wallet-address", connection.account);
+
+      // Atualizar UI
+      document.getElementById("login-button").disabled = true;
+      document.getElementById("user-email").disabled = true;
+      
+      // Mostrar endereço da carteira na interface
+      const walletInfo = document.getElementById("wallet-info");
+      const walletAddressEl = document.getElementById("wallet-address");
+      walletInfo.classList.add("active");
+      walletAddressEl.textContent = walletConnect.formatAddress(connection.account);
+
+      // Configurar eventos personalizados para mudanças na carteira
+      document.addEventListener('walletAccountChanged', handleWalletAccountChanged);
+      document.addEventListener('walletDisconnected', handleWalletDisconnected);
+
+      alert("Carteira conectada com sucesso!");
+    } catch (authError) {
+      console.error("Erro na verificação de autorização:", authError);
+      await walletConnect.disconnect();
+      alert("Erro ao verificar autorização da carteira. Tente novamente mais tarde.");
     }
   } catch (error) {
     console.error("Erro ao conectar a carteira:", error);
-    if (error.message.includes("User rejected")) {
+    if (error.message.includes("User rejected") || error.message.includes("User closed")) {
       alert("Conexão cancelada pelo usuário.");
     } else {
       alert("Erro ao conectar a carteira. Tente novamente.");
@@ -387,154 +334,51 @@ async function connectWallet() {
 // Função auxiliar para desconexão segura da carteira
 async function disconnectWallet() {
   try {
-    if (provider?.disconnect) {
-      await provider.disconnect();
-    }
-    web3Modal.clearCachedProvider();
-    provider = null;
-    web3Instance = null;
+    await walletConnect.disconnect();
+    
+    // Remover da sessão
+    sessionStorage.removeItem("wallet-address");
+    sessionStorage.removeItem("auth-type");
     
     // Limpar UI
     const walletInfo = document.getElementById("wallet-info");
     walletInfo.classList.remove("active");
     document.getElementById("wallet-address").textContent = "";
+    
+    // Reativar botões
+    document.getElementById("login-button").disabled = false;
+    document.getElementById("user-email").disabled = false;
   } catch (err) {
     console.error("Erro ao desconectar carteira:", err);
   }
 }
 
-// Função para verificar se o endereço da carteira está autorizado
-async function isWalletAuthorized(address) {
-  try {
-    console.log("Validando endereço de carteira no backend...");
-    const response = await fetch("https://fleek-nine.vercel.app/api/get-authorized-wallets");
-    if (!response.ok) {
-      throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
-    }
-
-    const data = await response.json();
-    console.log("Resposta da API:", data);
-
-    // Verifica se a resposta contém a lista de carteiras
-    if (!data.wallets || !Array.isArray(data.wallets)) {
-      console.error("Formato inesperado do JSON retornado pelo backend:", data);
-      return false;
-    }
-
-    // Normaliza e verifica se o endereço está autorizado
-    const authorized = data.wallets.map(w => w.toLowerCase()).includes(address.toLowerCase());
-    console.log("Carteira autorizada?", authorized);
-    return authorized;
-  } catch (error) {
-    console.error("Erro na validação da carteira:", error);
-    alert("Erro ao validar a carteira. Tente novamente mais tarde.");
-    return false;
-  }
+// Handler para mudança de conta da carteira
+function handleWalletAccountChanged(event) {
+  const newAccount = event.detail.account;
+  console.log("Conta da carteira alterada:", newAccount);
+  
+  sessionStorage.setItem("wallet-address", newAccount);
+  
+  // Atualizar endereço na interface
+  const walletAddressEl = document.getElementById("wallet-address");
+  walletAddressEl.textContent = walletConnect.formatAddress(newAccount);
 }
 
-// Função para conectar a carteira com Web3Modal
-async function connectWallet() {
-  try {
-    console.log("Conectando carteira via Web3Modal...");
-    
-    // Limpar cache do provider para evitar problemas 
-    web3Modal.clearCachedProvider();
-    
-    // Iniciar conexão 
-    provider = await web3Modal.connect();
-    
-    // Configurar web3 com Alchemy
-    try {
-      const alchemyProvider = new AlchemyWeb3.createAlchemyWeb3(
-        "https://eth-mainnet.alchemyapi.io/v2/rW3MzqivxqHlGZPwxSMCs0hherD2pFsH", 
-        { writeProvider: provider }
-      );
-      web3Instance = alchemyProvider;
-    } catch (err) {
-      console.error("Erro ao configurar Alchemy provider:", err);
-      // Fallback para Web3 padrão se o Alchemy falhar
-      web3Instance = new Web3(provider);
-    }
-    
-    // Obter contas conectadas
-    const accounts = await web3Instance.eth.getAccounts();
-    
-    if (accounts && accounts.length > 0) {
-      console.log("Carteira conectada:", accounts[0]);
-      
-      try {
-        // Verificar se a carteira está autorizada
-        const isAuthorized = await isWalletAuthorized(accounts[0]);
-        if (!isAuthorized) {
-          await disconnectWallet();
-          alert("Carteira não autorizada. Assine o NDA.");
-          return;
-        }
-
-        // Salvar informações no sessionStorage
-        sessionStorage.setItem("auth-type", "wallet");
-        sessionStorage.setItem("wallet-address", accounts[0]);
-
-        // Atualizar UI
-        document.getElementById("login-button").disabled = true;
-        document.getElementById("user-email").disabled = true;
-        
-        // Mostrar endereço da carteira na interface
-        const walletInfo = document.getElementById("wallet-info");
-        const walletAddressEl = document.getElementById("wallet-address");
-        walletInfo.classList.add("active");
-        walletAddressEl.textContent = formatWalletAddress(accounts[0]);
-
-        // Configurar eventos para o provider
-        if (provider.on) {
-          provider.on("accountsChanged", handleAccountsChanged);
-          provider.on("chainChanged", () => window.location.reload());
-          provider.on("disconnect", handleDisconnect);
-        }
-
-        alert("Carteira conectada com sucesso!");
-      } catch (authError) {
-        console.error("Erro na verificação de autorização:", authError);
-        await disconnectWallet();
-        alert("Erro ao verificar autorização da carteira. Tente novamente mais tarde.");
-      }
-    } else {
-      throw new Error("Não foi possível obter o endereço da carteira");
-    }
-  } catch (error) {
-    console.error("Erro ao conectar a carteira:", error);
-    if (error.message.includes("User rejected")) {
-      alert("Conexão cancelada pelo usuário.");
-    } else {
-      alert("Erro ao conectar a carteira. Tente novamente.");
-    }
-  }
-}
-
-// Função auxiliar para desconexão segura da carteira
-async function disconnectWallet() {
-  try {
-    if (provider?.disconnect) {
-      await provider.disconnect();
-    }
-    web3Modal.clearCachedProvider();
-    provider = null;
-    web3Instance = null;
-    
-    // Limpar UI
-    const walletInfo = document.getElementById("wallet-info");
-    walletInfo.classList.remove("active");
-    document.getElementById("wallet-address").textContent = "";
-  } catch (err) {
-    console.error("Erro ao desconectar carteira:", err);
-  }
-}
-
-// Função para formatar o endereço da carteira (exibir de forma abreviada)
-function formatWalletAddress(address) {
-  if (!address) return "";
-  if (address.length < 12) return address;
-  return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
+// Handler para desconexão da carteira
+function handleWalletDisconnected() {
+  console.log("Carteira desconectada");
+  
+  sessionStorage.removeItem("wallet-address");
+  sessionStorage.removeItem("auth-type");
+  
+  document.getElementById("login-button").disabled = false;
+  document.getElementById("user-email").disabled = false;
+  
+  // Ocultar informações da carteira
+  const walletInfo = document.getElementById("wallet-info");
+  walletInfo.classList.remove("active");
+  document.getElementById("wallet-address").textContent = "";
 }
 
 // Função para inicializar a aplicação
@@ -570,19 +414,39 @@ async function initializeApp() {
     const walletAddress = sessionStorage.getItem("wallet-address");
     
     if (walletAddress) {
-      console.log("Restaurando sessão de carteira:", walletAddress);
-      document.querySelectorAll('.auth-toggle').forEach(btn => btn.classList.remove('active'));
-      document.querySelector('[data-auth="wallet"]').classList.add('active');
-      document.querySelector('.auth-form').style.display = 'none';
-      document.getElementById("login-button").textContent = 'Conectar Carteira';
-      document.getElementById("login-button").disabled = true;
-      currentAuthMethod = 'wallet';
-      
-      // Mostrar endereço da carteira na interface
-      const walletInfo = document.getElementById("wallet-info");
-      const walletAddressEl = document.getElementById("wallet-address");
-      walletInfo.classList.add("active");
-      walletAddressEl.textContent = formatWalletAddress(walletAddress);
+      try {
+        console.log("Restaurando sessão de carteira...");
+        // Tentar restaurar a conexão da carteira
+        const connection = await walletConnect.restore();
+        
+        if (connection && connection.account) {
+          console.log("Sessão de carteira restaurada:", connection.account);
+          
+          // Configurar a interface
+          document.querySelectorAll('.auth-toggle').forEach(btn => btn.classList.remove('active'));
+          document.querySelector('[data-auth="wallet"]').classList.add('active');
+          document.querySelector('.auth-form').style.display = 'none';
+          document.getElementById("login-button").textContent = 'Conectar Carteira';
+          document.getElementById("login-button").disabled = true;
+          currentAuthMethod = 'wallet';
+          
+          // Mostrar endereço da carteira na interface
+          const walletInfo = document.getElementById("wallet-info");
+          const walletAddressEl = document.getElementById("wallet-address");
+          walletInfo.classList.add("active");
+          walletAddressEl.textContent = walletConnect.formatAddress(connection.account);
+          
+          // Configurar eventos personalizados para mudanças na carteira
+          document.addEventListener('walletAccountChanged', handleWalletAccountChanged);
+          document.addEventListener('walletDisconnected', handleWalletDisconnected);
+        } else {
+          console.log("Não foi possível restaurar a sessão de carteira");
+          sessionStorage.clear();
+        }
+      } catch (error) {
+        console.error("Erro ao restaurar sessão de carteira:", error);
+        sessionStorage.clear();
+      }
     } else {
       sessionStorage.clear();
     }
