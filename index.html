@@ -8,18 +8,27 @@
   <!-- PDF.js Library -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js" defer></script>
   <!-- PDF.js Worker -->
-  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js" defer></script>
-  <!-- Magic SDK -->
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js" defer></script>  <!-- Magic SDK -->
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js" defer></script>
+  <!-- Web3 e WalletConnect -->
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.5.2/dist/web3.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@walletconnect/web3-provider@1.7.1/dist/umd/index.min.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/web3modal@1.9.5/dist/index.min.js"></script>
   <!-- Script JavaScript externo -->
   <script src="script.js" defer></script>
 </head>
 <body>
-  <!-- Cabeçalho -->
-  <header id="header">
-    <input type="email" id="user-email" placeholder="Digite seu e-mail" />
-    <div class="button-group">
-      <button id="login-button">Fazer Login</button>
+  <!-- Cabeçalho -->  <header id="header">
+    <div class="auth-container">
+      <div class="auth-options">
+        <button class="auth-toggle active" data-auth="email">Login com Email</button>
+        <button class="auth-toggle" data-auth="wallet">Login com Wallet</button>
+      </div>
+      <div class="auth-form">
+        <input type="email" id="user-email" placeholder="Digite seu e-mail" />
+      </div>
+      <div class="button-group">
+        <button id="login-button">Fazer Login</button>
       <button id="acessar-arquivo">Acessar Documento</button>
       <button id="cadastro-metaverso">Cadastro no Metaverso</button>
       <button id="logout-button">Logout</button>

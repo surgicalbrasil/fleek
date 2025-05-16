@@ -1,6 +1,9 @@
 // Inicializar o Magic SDK
 const magic = new Magic("pk_live_20134EF9B8F26232");
 
+// Estado da autenticação
+let currentAuthMethod = 'email';
+
 // Configurar o worker do PDF.js
 pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js';
 
@@ -34,39 +37,74 @@ async function isEmailAuthorized(email) {
   }
 }
 
-// Função de Login
+// Configurar os botões de alternância de autenticação
+document.querySelectorAll('.auth-toggle').forEach(button => {
+  button.addEventListener('click', () => {
+    document.querySelectorAll('.auth-toggle').forEach(btn => btn.classList.remove('active'));
+    button.classList.add('active');
+    currentAuthMethod = button.dataset.auth;
+    
+    const emailForm = document.querySelector('.auth-form');
+    emailForm.style.display = currentAuthMethod === 'email' ? 'block' : 'none';
+  });
+});
+
+// Handler do botão de login
 document.getElementById("login-button").addEventListener("click", async () => {
-  const emailInput = document.getElementById("user-email");
-  const email = emailInput.value.trim();
+  if (currentAuthMethod === 'email') {
+    const emailInput = document.getElementById("user-email");
+    const email = emailInput.value.trim();
 
-  if (!email) {
-    alert("Por favor, insira um e-mail válido.");
-    emailInput.focus();
-    return;
-  }
+    if (!email) {
+      alert("Por favor, insira um e-mail válido.");
+      emailInput.focus();
+      return;
+    }
 
-  const isAuthorized = await isEmailAuthorized(email);
-  if (!isAuthorized) {
-    alert("E-mail não autorizado. Assine o NDA.");
-    return;
-  }
+    const isAuthorized = await isEmailAuthorized(email);
+    if (!isAuthorized) {
+      alert("E-mail não autorizado. Assine o NDA.");
+      return;
+    }
 
-  try {
-    console.log("Realizando login...");
-    await magic.auth.loginWithMagicLink({ email });
-    const token = await magic.user.getIdToken();
-    sessionStorage.setItem("magic-token", token);
-    alert("Login realizado com sucesso!");
-  } catch (error) {
-    console.error("Erro ao realizar login:", error);
-    alert("Erro ao realizar login.");
+    try {
+      console.log("Realizando login com email...");
+      await magic.auth.loginWithMagicLink({ email });
+      const token = await magic.user.getIdToken();
+      sessionStorage.setItem("auth-type", "email");
+      sessionStorage.setItem("magic-token", token);
+      document.getElementById("user-email").disabled = true;
+      alert("Login realizado com sucesso!");
+    } catch (error) {
+      console.error("Erro ao realizar login:", error);
+      alert("Erro ao realizar login.");
+    }
+  } else {
+    try {
+      console.log("Conectando wallet...");
+      provider = await web3Modal.connect();
+      web3 = new Web3(provider);
+      
+      const accounts = await web3.eth.getAccounts();
+      account = accounts[0];
+      
+      sessionStorage.setItem("auth-type", "wallet");
+      sessionStorage.setItem("wallet-address", account);
+      alert("Login realizado com sucesso via wallet!");
+    } catch (error) {
+      console.error("Erro ao conectar wallet:", error);
+      alert("Erro ao realizar login com wallet.");
+    }
   }
 });
 
 // Função para acessar o documento
 document.getElementById("acessar-arquivo").addEventListener("click", async () => {
+  const authType = sessionStorage.getItem("auth-type");
   const token = sessionStorage.getItem("magic-token");
-  if (!token) {
+  const walletAddress = sessionStorage.getItem("wallet-address");
+  
+  if (!authType || (!token && !walletAddress)) {
     alert("Sessão expirada. Faça login novamente.");
     return;
   }
@@ -76,7 +114,12 @@ document.getElementById("acessar-arquivo").addEventListener("click", async () =>
     const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token, fileName: "Paper.pdf" }),
+      body: JSON.stringify({ 
+        token,
+        walletAddress,
+        authType,
+        fileName: "Paper.pdf" 
+      }),
     });
 
     if (!response.ok) {
@@ -140,8 +183,30 @@ document.getElementById("close-modal").addEventListener("click", () => {
 document.getElementById("logout-button").addEventListener("click", async () => {
   try {
     console.log("Realizando logout...");
-    await magic.user.logout();
+    const authType = sessionStorage.getItem("auth-type");
+    
+    if (authType === "email") {
+      await magic.user.logout();
+    } else if (authType === "wallet") {
+      if (provider?.close) {
+        await provider.close();
+      }
+      await web3Modal.clearCachedProvider();
+      provider = null;
+      web3 = null;
+      account = null;
+    }
+    
     sessionStorage.clear();
+    document.getElementById("user-email").disabled = false;
+    document.getElementById("user-email").value = "";
+    document.querySelectorAll('.auth-toggle').forEach(btn => {
+      btn.classList.remove('active');
+    });
+    document.querySelector('[data-auth="email"]').classList.add('active');
+    document.querySelector('.auth-form').style.display = 'block';
+    currentAuthMethod = 'email';
+    
     alert("Logout realizado com sucesso!");
   } catch (error) {
     console.error("Erro ao realizar logout:", error);
