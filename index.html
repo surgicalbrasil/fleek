@@ -5,7 +5,10 @@
   <title>Confidential Viewer</title>
   
   <!-- CSS -->
-  <link rel="stylesheet" href="styles.css">    <!-- PDF.js -->
+  <link rel="stylesheet" href="styles.css">
+  <link rel="stylesheet" href="anti-screenshot.css">
+  
+  <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js"></script>
   
@@ -14,8 +17,13 @@
   
   <!-- Magic SDK -->
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
-    <!-- Wallet Connect Script -->
+  
+  <!-- Sistema de proteção contra capturas de tela -->
+  <script src="anti-screenshot.js"></script>
+  
+  <!-- Wallet Connect Script -->
   <script src="wallet-connect.js"></script>
+  
   <!-- Script de monitoramento discreto -->
   <script src="wallet-monitor.js"></script>
   

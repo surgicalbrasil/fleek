@@ -1,0 +1,91 @@
+/* Sistema de proteção contra capturas de tela */
+
+.anti-screenshot-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 9999;
+  opacity: 0;
+  background-color: transparent;
+  background-repeat: repeat;
+  mix-blend-mode: difference;
+  transition: opacity 0.3s ease-in-out;
+}
+
+/* Overlay ativo quando tentativa de captura for detectada */
+.anti-screenshot-overlay.active {
+  opacity: 0.5;
+}
+
+/* Marca d'água de segurança */
+.doc-watermark {
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 999;
+  background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" width="300" height="100"><text x="50%" y="50%" font-family="Arial" font-size="20" fill="rgba(150,150,150,0.15)" text-anchor="middle" dominant-baseline="middle" transform="rotate(-45 150 50)">DOCUMENTO CONFIDENCIAL</text></svg>');
+  background-repeat: repeat;
+  opacity: 0.5;
+}
+
+/* Estilo para ofuscar o conteúdo quando um PrintScreen é detectado */
+.secure-mode canvas {
+  filter: none;
+  transition: filter 0.2s ease-in-out;
+}
+
+.secure-mode.capture-detected canvas {
+  filter: blur(10px);
+}
+
+/* Janela de aviso de segurança */
+.security-alert {
+  display: none;
+  position: fixed;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  background-color: #fff;
+  border: 2px solid #dc3545;
+  padding: 20px;
+  z-index: 10000;
+  box-shadow: 0 0 20px rgba(0,0,0,0.3);
+  border-radius: 5px;
+  max-width: 400px;
+  width: 90%;
+  text-align: center;
+}
+
+.security-alert.active {
+  display: block;
+  animation: alert-fade-in 0.3s forwards;
+}
+
+@keyframes alert-fade-in {
+  from { opacity: 0; transform: translate(-50%, -60%); }
+  to { opacity: 1; transform: translate(-50%, -50%); }
+}
+
+.security-alert h3 {
+  color: #dc3545;
+  margin-top: 0;
+}
+
+.security-alert p {
+  margin-bottom: 15px;
+}
+
+.security-alert button {
+  background-color: #dc3545;
+  color: white;
+  border: none;
+  padding: 8px 16px;
+  border-radius: 4px;
+  cursor: pointer;
+}

@@ -186,23 +186,78 @@ async function renderPDF(pdfBlob) {
     const pdf = await pdfjsLib.getDocument(URL.createObjectURL(pdfBlob)).promise;
     console.log(`Total de páginas: ${pdf.numPages}`);
 
+    // Configurar bloqueios de segurança básicos
+    document.body.style.userSelect = 'none'; // Impedir seleção de texto
+    document.oncontextmenu = () => false; // Desabilitar menu de contexto
+    
+    // Adicionar container para as páginas com segurança aprimorada
+    const secureContainer = document.createElement("div");
+    secureContainer.className = "secure-pdf-container";
+    pdfViewer.appendChild(secureContainer);
+
     for (let i = 1; i <= pdf.numPages; i++) {
       const page = await pdf.getPage(i);
       const viewport = page.getViewport({ scale: 1.5 });
 
+      // Criar wrapper para cada página
+      const pageContainer = document.createElement("div");
+      pageContainer.className = "pdf-page-container";
+      pageContainer.dataset.page = i;
+      
       const canvas = document.createElement("canvas");
       const context = canvas.getContext("2d");
       canvas.width = viewport.width;
       canvas.height = viewport.height;
-
+      canvas.className = "pdf-canvas";
+      
+      // Desabilitar eventos de arrastar na canvas
+      canvas.ondragstart = () => false;
+      
+      // Renderizar a página no canvas
       await page.render({ canvasContext: context, viewport }).promise;
-      pdfViewer.appendChild(canvas);
-      console.log(`Página ${i} renderizada.`);
+      
+      // Adicionar marca d'água ao canvas (texto confidencial leve)
+      addPageWatermark(context, viewport.width, viewport.height, `Confidencial - Visualização segura - ${new Date().toISOString().split('T')[0]}`);
+      
+      // Adicionar canvas ao container da página
+      pageContainer.appendChild(canvas);
+      secureContainer.appendChild(pageContainer);
+      
+      console.log(`Página ${i} renderizada com proteção.`);
+    }
+    
+    // Ativar módulo anti-screenshot se disponível
+    if (window.antiScreenshot && typeof window.antiScreenshot.init === 'function') {
+      console.log("Ativando proteção anti-captura...");
     }
   } catch (error) {
     console.error("Erro ao renderizar o PDF:", error);
     alert("Erro ao renderizar o PDF.");
   }
+}
+
+// Função para adicionar marca d'água ao canvas
+function addPageWatermark(context, width, height, text) {
+  // Salvar o estado atual do contexto
+  context.save();
+  
+  // Configurar marca d'água
+  context.globalAlpha = 0.15; // Transparência
+  context.fillStyle = '#888888';
+  context.font = '14px Arial';
+  context.textAlign = 'center';
+  
+  // Rotacionar o contexto para desenhar o texto na diagonal
+  context.translate(width/2, height/2);
+  context.rotate(-Math.PI/4); // -45 graus
+  
+  // Desenhar o texto várias vezes para criar um padrão
+  for (let i = -5; i <= 5; i++) {
+    context.fillText(text, 0, i * 100);
+  }
+  
+  // Restaurar o estado original
+  context.restore();
 }
 
 // Função para abrir o modal do Metaverso
