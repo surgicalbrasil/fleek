@@ -13,11 +13,11 @@ class AntiScreenshotSystem {
     this.watermark = null;
     this.alertBox = null;
     this.pdfViewer = null;
-    
-    // Métodos bind
+      // Métodos bind
     this.handlePrintScreen = this.handlePrintScreen.bind(this);
     this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
     this.handleDevTools = this.handleDevTools.bind(this);
+    this.handlePrintAttempt = this.handlePrintAttempt.bind(this);
     this.resetCaptureState = this.resetCaptureState.bind(this);
     this.closeAlert = this.closeAlert.bind(this);
   }
@@ -25,6 +25,9 @@ class AntiScreenshotSystem {
   // Inicializar o sistema
   init() {
     console.log("Inicializando sistema anti-captura de tela...");
+    
+    // Interceptar função de impressão do navegador
+    this.overridePrintFunction();
     
     // Só inicializar quando o documento estiver totalmente carregado
     if (document.readyState === 'loading') {
@@ -34,8 +37,7 @@ class AntiScreenshotSystem {
     }
   }
   
-  // Configurar o sistema
-  setup() {
+  // Configurar o sistema  setup() {
     this.pdfViewer = document.getElementById('pdf-viewer');
     
     // Adicionar classe de modo seguro
@@ -54,6 +56,9 @@ class AntiScreenshotSystem {
     
     // Verificar suporte de funcionalidades
     this.checkFeatureSupport();
+    
+    // Monitorar criação de iframes para prevenir impressão através deles
+    this.setupIframeMonitor();
     
     console.log("Sistema anti-captura de tela inicializado");
     this.isSecure = true;
@@ -86,7 +91,7 @@ class AntiScreenshotSystem {
     // Adicionar evento de clique ao botão
     document.getElementById('close-alert').addEventListener('click', this.closeAlert);
   }
-    // Instalar event listeners
+  // Instalar event listeners
   installEventListeners() {
     // Detectar PrintScreen
     document.addEventListener('keyup', this.handlePrintScreen);
@@ -129,9 +134,39 @@ class AntiScreenshotSystem {
         }
       }
     });
+      // Bloquear tentativas de impressão
+    window.addEventListener('beforeprint', e => {
+      console.log('Tentativa de impressão detectada');
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      e.stopPropagation();
+      this.handlePrintAttempt();
+      return false;
+    }, true); // Capturar na fase de captura
+    
+    // Método alternativo para detectar impressão (Ctrl+P)
+    document.addEventListener('keydown', e => {
+      if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+        console.log('Tentativa de impressão via atalho detectada');
+        e.preventDefault();
+        e.stopImmediatePropagation();
+        e.stopPropagation();
+        this.handlePrintAttempt();
+        return false;
+      }
+    }, true); // Capturar na fase de captura
+    
+    // Método adicional para detectar impressão (menu de contexto)
+    document.addEventListener('mouseup', e => {
+      // Verificar se o botão direito foi clicado (possível menu de impressão)
+      if (e.button === 2) {
+        // O menu já é bloqueado pelo event listener de contextmenu
+        // Este é apenas um registro adicional
+        console.log('Detectado clique com botão direito - monitorando para opções de impressão');
+      }
+    });
   }
-  
-  // Verificar suporte de funcionalidades
+    // Verificar suporte de funcionalidades
   checkFeatureSupport() {
     // Verificar se o navegador suporta ClipboardEvent
     const hasClipboardAPI = 'ClipboardEvent' in window;
@@ -140,6 +175,101 @@ class AntiScreenshotSystem {
     // Se não houver suporte, notificar no console
     if (!hasClipboardAPI) {
       console.warn("Este navegador pode não suportar todos os recursos de proteção contra capturas de tela.");
+    }
+  }
+    // Sobrescrever função de impressão do navegador
+  overridePrintFunction() {
+    try {
+      // Guardar referência original (para debugging apenas)
+      window._originalPrint = window.print;
+      
+      // Sobrescrever função print
+      window.print = () => {
+        console.warn("Tentativa de impressão via método window.print() detectada e bloqueada");
+        this.handlePrintAttempt();
+        return false;
+      };
+      
+      // Para iframes também
+      document.querySelectorAll('iframe').forEach(iframe => {
+        try {
+          if (iframe.contentWindow) {
+            iframe.contentWindow.print = () => {
+              console.warn("Tentativa de impressão via iframe detectada e bloqueada");
+              this.handlePrintAttempt();
+              return false;
+            };
+          }
+        } catch (e) {
+          // Ignora erros de cross-origin
+          console.log("Não foi possível acessar iframe - possível restrição de cross-origin");
+        }
+      });
+      
+      console.log("Função de impressão do navegador sobrescrita com sucesso");
+    } catch (e) {
+      console.error("Erro ao sobrescrever função de impressão:", e);
+    }
+  }
+  
+  // Monitorar criação dinâmica de iframes
+  setupIframeMonitor() {
+    try {
+      // Criar um observador para mudanças no DOM
+      const observer = new MutationObserver(mutations => {
+        mutations.forEach(mutation => {
+          if (mutation.addedNodes && mutation.addedNodes.length) {
+            for (let i = 0; i < mutation.addedNodes.length; i++) {
+              const node = mutation.addedNodes[i];
+              
+              // Verificar se o nó é um iframe
+              if (node.tagName && node.tagName.toLowerCase() === 'iframe') {
+                console.log('Novo iframe detectado - aplicando proteção contra impressão');
+                
+                // Aguardar carregamento do iframe
+                node.addEventListener('load', () => {
+                  try {
+                    if (node.contentWindow) {
+                      // Sobrescrever função de impressão no iframe
+                      node.contentWindow.print = () => {
+                        console.warn("Tentativa de impressão via iframe dinâmico bloqueada");
+                        this.handlePrintAttempt();
+                        return false;
+                      };
+                      
+                      // Adicionar listener para Ctrl+P dentro do iframe
+                      if (node.contentDocument) {
+                        node.contentDocument.addEventListener('keydown', (e) => {
+                          if ((e.ctrlKey || e.metaKey) && e.key === 'p') {
+                            e.preventDefault();
+                            e.stopPropagation();
+                            console.warn("Tentativa de impressão via atalho em iframe detectada");
+                            this.handlePrintAttempt();
+                            return false;
+                          }
+                        }, true);
+                      }
+                    }
+                  } catch (e) {
+                    // Ignora erros de cross-origin
+                    console.log("Não foi possível acessar conteúdo do iframe - possível restrição de cross-origin");
+                  }
+                });
+              }
+            }
+          }
+        });
+      });
+      
+      // Configurar e iniciar o observador
+      observer.observe(document.body, {
+        childList: true,
+        subtree: true
+      });
+      
+      console.log("Monitor de iframes dinâmicos inicializado");
+    } catch (e) {
+      console.error("Erro ao configurar monitor de iframes:", e);
     }
   }
   
@@ -183,8 +313,7 @@ class AntiScreenshotSystem {
       this._tabHiddenTime = null;
     }
   }
-  
-  // Handler para detectar abertura de DevTools
+    // Handler para detectar abertura de DevTools
   handleDevTools() {
     // Diferença entre altura da janela e altura interna do navegador
     const widthDiff = window.outerWidth - window.innerWidth;
@@ -194,6 +323,36 @@ class AntiScreenshotSystem {
     if (widthDiff > 200 || heightDiff > 200) {
       this.triggerCaptureProtection();
     }
+  }
+  
+  // Handler para tentativas de impressão
+  handlePrintAttempt() {
+    console.warn(`Tentativa de impressão detectada - Encerrando sessão imediatamente`);
+    this.captureAttempts += 1;
+    this.captureDetected = true;
+    
+    // Ativar overlay
+    this.overlay.classList.add('active');
+    
+    // Aplicar blur ao conteúdo
+    if (this.pdfViewer) {
+      this.pdfViewer.classList.add('capture-detected');
+    }
+    
+    // Mostrar alerta de impressão não autorizada
+    this.alertBox.innerHTML = `
+      <h3>Alerta de Segurança Crítico</h3>
+      <p>Tentativa de impressão detectada. Este documento é estritamente confidencial e protegido contra impressões não autorizadas.</p>
+      <p class="critical-alert">A sessão será encerrada imediatamente por motivos de segurança.</p>
+    `;
+    
+    // Mostrar alerta
+    this.alertBox.classList.add('active');
+    
+    // Encerrar a sessão imediatamente após a primeira tentativa
+    setTimeout(() => {
+      this.terminateSession();
+    }, 1500); // Pequeno delay para o usuário ver o alerta
   }
     // Acionar proteção contra captura
   triggerCaptureProtection() {

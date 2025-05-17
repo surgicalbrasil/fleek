@@ -122,3 +122,22 @@
     filter: blur(20px) brightness(0.1);
   }
 }
+
+/* Regras para impressão - mostrar mensagem de que a impressão não é permitida */
+@media print {
+  body * {
+    display: none !important;
+  }
+  
+  body:after {
+    content: "IMPRESSÃO NÃO AUTORIZADA. Este documento está protegido contra impressão.";
+    display: block !important;
+    font-size: 24px;
+    color: #dc3545;
+    font-weight: bold;
+    text-align: center;
+    margin: 50px;
+    border: 5px solid #dc3545;
+    padding: 50px;
+  }
+}
