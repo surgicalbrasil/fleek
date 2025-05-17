@@ -42,3 +42,8 @@ files/encrypt.js
 
 # Arquivos de debug
 debug.js
+
+# Scripts temporários
+*.bat
+*.ps1
+ersbeelinkDesktopfleek*
