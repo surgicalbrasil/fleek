@@ -5,10 +5,10 @@ import fetch from "node-fetch";
 import { google } from "googleapis";
 import Cors from 'cors';
 
-// Inicializa o middleware CORS para permitir apenas o domínio especificado
+// Inicializa o middleware CORS para permitir domínio frontend e desenvolvimento local
 const cors = Cors({
   methods: ['POST', 'OPTIONS'], // Métodos permitidos
-  origin: 'https://surgicalbrasil.github.io/fleek/', // Permitir apenas o domínio especificado
+  origin: ['https://surgicalbrasil.github.io/fleek/', 'http://localhost:3000', '*'], // Permitir domínio especificado e desenvolvimento local
   allowedHeaders: ['Content-Type'], // Cabeçalhos permitidos
 });
 

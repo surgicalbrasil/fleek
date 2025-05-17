@@ -252,3 +252,20 @@ canvas {
     transform: scale(1);
   }
 }
+
+/* Indicadores de status de funcionamento */
+.button-functional {
+  position: relative;
+}
+
+.button-functional::after {
+  content: "";
+  display: block;
+  width: 6px;
+  height: 6px;
+  background-color: #4CAF50;
+  border-radius: 50%;
+  position: absolute;
+  bottom: 3px;
+  right: 3px;
+}

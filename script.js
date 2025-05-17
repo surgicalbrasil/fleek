@@ -4,15 +4,23 @@ let magicPubKey = null;
 
 async function initMagicSDK() {
   try {
-    const response = await fetch("/api/get-magic-key");
-    if (response.ok) {
+    // Tenta buscar a chave do backend, com fallback para desenvolvimento local
+    const response = await fetch("/api/get-magic-key").catch(err => {
+      console.warn("Erro ao buscar chave do Magic SDK no servidor, usando fallback:", err);
+      return null;
+    });
+    
+    if (response && response.ok) {
       const data = await response.json();
       magicPubKey = data.magicPublicKey;
-      window.magic = new Magic(magicPubKey);
-      console.log("Magic SDK inicializado com sucesso");
     } else {
-      console.error("Falha ao obter a chave do Magic SDK");
+      // Chave de fallback para desenvolvimento local - substituir em produção
+      console.warn("Usando chave Magic SDK de desenvolvimento");
+      magicPubKey = "pk_live_seu_magic_public_key";
     }
+    
+    window.magic = new Magic(magicPubKey);
+    console.log("Magic SDK inicializado com sucesso");
   } catch (error) {
     console.error("Erro ao inicializar Magic SDK:", error);
   }
@@ -31,7 +39,7 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = 'https://cdnjs.cloudflare.com/ajax/libs
 async function isEmailAuthorized(email) {
   try {
     console.log("Validando e-mail no backend...");
-    const response = await fetch("https://fleek-nine.vercel.app/api/get-authorized-emails");
+    const response = await fetch("/api/get-authorized-emails");
     if (!response.ok) {
       throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
     }
@@ -155,9 +163,7 @@ document.getElementById("acessar-arquivo").addEventListener("click", async () =>
         return;
       }
       requestBody.walletAddress = walletAddress;
-    }
-
-    const response = await fetch("https://fleek-nine.vercel.app/api/get-file", {
+    }    const response = await fetch("/api/get-file", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(requestBody),
@@ -335,7 +341,7 @@ const walletConnect = window.walletConnect;
 async function isWalletAuthorized(address) {
   try {
     console.log("Validando endereço de carteira no backend...");
-    const response = await fetch("https://fleek-nine.vercel.app/api/get-authorized-wallets");
+    const response = await fetch("/api/get-authorized-wallets");
     if (!response.ok) {
       throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
     }

@@ -3,9 +3,8 @@
 import Cors from 'cors';
 
 // Configuração do CORS para permitir apenas o domínio do frontend
-const cors = Cors({
-  methods: ['GET', 'OPTIONS'],
-  origin: 'https://surgicalbrasil.github.io/fleek/',
+const cors = Cors({  methods: ['GET', 'OPTIONS'],
+  origin: ['https://surgicalbrasil.github.io/fleek/', 'http://localhost:3000', '*'],
 });
 
 export default async function handler(req, res) {

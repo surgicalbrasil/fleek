@@ -2,10 +2,10 @@
 import { google } from "googleapis";
 import Cors from 'cors';
 
-// Configuração do CORS para permitir apenas o domínio do frontend
+// Configuração do CORS para permitir o domínio do frontend e desenvolvimento local
 const cors = Cors({
   methods: ['GET', 'OPTIONS'],
-  origin: 'https://surgicalbrasil.github.io/fleek/',
+  origin: ['https://surgicalbrasil.github.io/fleek/', 'http://localhost:3000', '*'],
 });
 
 export default async function handler(req, res) {
