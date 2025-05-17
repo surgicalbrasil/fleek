@@ -1,7 +1,7 @@
 // wallet-connect.js - Gerenciador de conexão de carteiras
 
-// Configuração da chave da Alchemy
-const ALCHEMY_API_KEY = "rW3MzqivxqHlGZPwxSMCs0hherD2pFsH";
+// Configuração da chave da Infura (anteriormente usávamos Alchemy)
+const INFURA_API_KEY = "82e06acf7f54495f873137ea30e21300";
 
 // Estado da conexão
 let provider = null;
@@ -12,15 +12,14 @@ let chainId = null;
 // Configuração das opções do provedor para Web3Modal
 const providerOptions = {
   // MetaMask é incluída por padrão (não precisa configurar)
-  
-  // WalletConnect
+    // WalletConnect
   walletconnect: {
     package: WalletConnectProvider.default,
     options: {
       rpc: {
-        1: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
-        5: `https://eth-goerli.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
-        137: `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
+        1: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+        5: `https://goerli.infura.io/v3/${INFURA_API_KEY}`,
+        137: `https://polygon-mainnet.infura.io/v3/${INFURA_API_KEY}`
       },
       chainId: 1,
       network: "mainnet"
@@ -32,8 +31,8 @@ const providerOptions = {
     options: {
       appName: "Confidential Viewer",
       rpc: {
-        1: `https://eth-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`,
-        137: `https://polygon-mainnet.g.alchemy.com/v2/${ALCHEMY_API_KEY}`
+        1: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
+        137: `https://polygon-mainnet.infura.io/v3/${INFURA_API_KEY}`
       },
       chainId: 1,
       darkMode: false
@@ -46,19 +45,31 @@ let web3Modal;
 
 // Função para inicializar o modal
 function initWeb3Modal() {
-  web3Modal = new Web3Modal({
-    cacheProvider: true, // Muito importante! Permite reconectar automaticamente
-    theme: {
-      background: "#f8f9fa",
-      main: "#007bff",
-      secondary: "#6c757d",
-      border: "#e9ecef",
-      hover: "#adb5bd"
-    },
-    providerOptions: providerOptions
-  });
-  
-  console.log("Web3Modal inicializado com sucesso");
+  try {
+    // Verificar se o objeto Web3Modal existe globalmente
+    if (typeof window.Web3Modal === 'undefined') {
+      console.error("Web3Modal não está disponível. Verifique se a biblioteca foi carregada corretamente.");
+      throw new Error("Web3Modal não está disponível");
+    }
+    
+    web3Modal = new window.Web3Modal({
+      cacheProvider: true, // Muito importante! Permite reconectar automaticamente
+      theme: {
+        background: "#f8f9fa",
+        main: "#007bff",
+        secondary: "#6c757d",
+        border: "#e9ecef",
+        hover: "#adb5bd"
+      },
+      providerOptions: providerOptions
+    });
+    
+    console.log("Web3Modal inicializado com sucesso");
+  } catch (error) {
+    console.error("Erro ao inicializar Web3Modal:", error);
+    alert("Erro ao inicializar o seletor de carteiras. Por favor, tente novamente mais tarde ou entre em contato com o suporte.");
+    throw error;
+  }
 }
 
 // Função para conectar à carteira
@@ -66,29 +77,43 @@ async function connectWallet() {
   try {
     console.log("Conectando carteira via Web3Modal...");
 
+    // Verificar se o objeto Web3 está disponível
+    if (typeof Web3 === 'undefined') {
+      console.error("Web3 não está disponível");
+      alert("A biblioteca Web3 não está disponível. Verifique sua conexão com a internet e tente novamente.");
+      throw new Error("Web3 não está disponível");
+    }
+
     // Inicializar o modal se ainda não foi inicializado
     if (!web3Modal) {
+      console.log("Inicializando Web3Modal...");
       initWeb3Modal();
     }
     
     // Conectar ao provedor
+    console.log("Solicitando conexão ao provedor...");
     provider = await web3Modal.connect();
     
     if (!provider) {
+      console.error("Nenhum provedor selecionado");
       throw new Error("Nenhum provedor selecionado");
     }
     
     // Configuração do Web3
+    console.log("Configurando instância Web3...");
     web3Instance = new Web3(provider);
     
     // Obter informação da rede conectada
+    console.log("Obtendo informações da rede...");
     chainId = await web3Instance.eth.getChainId();
     console.log("Conectado à rede:", chainId);
     
     // Obter contas
+    console.log("Obtendo contas da carteira...");
     const accounts = await web3Instance.eth.getAccounts();
     
     if (!accounts || accounts.length === 0) {
+      console.error("Não foi possível obter as contas da carteira");
       throw new Error("Não foi possível obter as contas da carteira");
     }
     
@@ -96,14 +121,31 @@ async function connectWallet() {
     console.log("Carteira conectada:", currentAccount);
     
     // Configurar eventos para mudanças na carteira
+    console.log("Configurando event listeners...");
     setupEventListeners();
     
     return {
       account: currentAccount,
       chainId: chainId
-    };
-  } catch (error) {
+    };  } catch (error) {
     console.error("Erro ao conectar carteira:", error);
+    
+    // Mensagens de erro mais detalhadas para ajudar na depuração
+    let errorMessage = "Erro ao conectar carteira. ";
+    
+    if (error.message.includes("Web3Modal is not a constructor")) {
+      errorMessage += "A biblioteca Web3Modal não foi carregada corretamente. Por favor, recarregue a página e tente novamente.";
+    } else if (error.message.includes("Web3 não está disponível")) {
+      errorMessage += "A biblioteca Web3 não está disponível. Verifique sua conexão com a internet e tente novamente.";
+    } else if (error.message.includes("User rejected") || error.message.includes("User denied")) {
+      errorMessage += "Você rejeitou a solicitação de conexão.";
+    } else if (error.message.includes("Already processing")) {
+      errorMessage += "Uma conexão já está em processamento. Por favor, aguarde ou recarregue a página.";
+    } else {
+      errorMessage += "Verifique se você tem uma carteira Web3 instalada e tente novamente.";
+    }
+    
+    alert(errorMessage);
     throw error;
   }
 }
@@ -212,6 +254,24 @@ function formatWalletAddress(address) {
   if (!address) return "";
   return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
 }
+
+// Verificar e adicionar polyfill para Web3Modal se necessário
+window.addEventListener('load', function() {
+  if (typeof window.Web3Modal === 'undefined' && typeof window.Web3 !== 'undefined') {
+    console.warn("Web3Modal não detectado. Tentando criar fallback...");
+    try {
+      // Aviso para o usuário
+      alert("Aviso: Algumas bibliotecas necessárias para conexão de carteira podem não estar disponíveis. Recarregue a página ou tente novamente mais tarde.");
+      
+      // Tentar usar o ethereum provider diretamente se disponível
+      if (window.ethereum) {
+        console.log("Ethereum provider detectado, usando como fallback");
+      }
+    } catch (e) {
+      console.error("Erro ao configurar fallback:", e);
+    }
+  }
+});
 
 // Exportar funções para uso global
 window.walletConnect = {

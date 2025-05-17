@@ -4,6 +4,18 @@
  * ajudar a verificar se a conexão de carteira está funcionando
  */
 
+// Verificar disponibilidade das bibliotecas principais
+window.addEventListener('load', function() {
+  console.log("===== Verificando bibliotecas Web3 =====");
+  console.log("Web3 disponível:", typeof Web3 !== 'undefined');
+  console.log("window.Web3 disponível:", typeof window.Web3 !== 'undefined');
+  console.log("Web3Modal disponível:", typeof Web3Modal !== 'undefined');
+  console.log("window.Web3Modal disponível:", typeof window.Web3Modal !== 'undefined');
+  console.log("WalletConnectProvider disponível:", typeof WalletConnectProvider !== 'undefined');
+  console.log("CoinbaseWalletSDK disponível:", typeof CoinbaseWalletSDK !== 'undefined');
+  console.log("===== Fim da verificação =====");
+});
+
 document.addEventListener('DOMContentLoaded', function() {
   // Criar botão de debug
   const debugBtn = document.createElement('button');
