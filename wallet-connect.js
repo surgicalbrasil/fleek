@@ -1,5 +1,40 @@
 // wallet-connect.js - Gerenciador de conexão de carteiras
 
+// Configuração segura para APIs
+// A API Key é obtida do backend para não expor no frontend
+let apiKey = null; // Será preenchido assincronamente
+
+// Função para obter configurações seguras do servidor
+async function getSecureConfig() {
+  try {
+    const response = await fetch('/api/get-config');
+    if (!response.ok) {
+      console.error('Erro ao obter configuração:', response.statusText);
+      return null;
+    }
+    const config = await response.json();
+    return config;
+  } catch (error) {
+    console.error('Falha ao obter configuração:', error);
+    return null;
+  }
+}
+
+// Inicializar configurações quando a página carregar
+window.addEventListener('load', async function() {
+  try {
+    const config = await getSecureConfig();
+    if (config && config.config && config.config.apiKey) {
+      apiKey = config.config.apiKey;
+      console.log('Configurações carregadas com sucesso');
+    } else {
+      console.warn('Não foi possível obter as configurações do servidor');
+    }
+  } catch (error) {
+    console.error('Erro ao inicializar configurações:', error);
+  }
+});
+
 // Estado da conexão
 let provider = null;
 let web3Instance = null;

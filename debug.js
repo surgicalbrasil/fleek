@@ -1,38 +1,18 @@
 /**
- * Script de teste para conexão de carteiras
- * Este script adiciona um botão de debug à interface para
- * ajudar a verificar se a conexão de carteira está funcionando
+ * Script de monitoramento para conexão de carteiras
+ * Versão discreta que não adiciona botões de debug à UI
  */
 
-// Verificar disponibilidade das bibliotecas principais
+// Verificar disponibilidade das bibliotecas principais no carregamento da página
 window.addEventListener('load', function() {
-  console.log("===== Verificando bibliotecas Web3 =====");
+  console.log("===== Verificando bibliotecas Web3 (Monitoramento silencioso) =====");
   console.log("Web3 disponível:", typeof Web3 !== 'undefined');
-  console.log("window.Web3 disponível:", typeof window.Web3 !== 'undefined');
-  console.log("Web3Modal disponível:", typeof Web3Modal !== 'undefined');
-  console.log("window.Web3Modal disponível:", typeof window.Web3Modal !== 'undefined');
-  console.log("WalletConnectProvider disponível:", typeof WalletConnectProvider !== 'undefined');
-  console.log("CoinbaseWalletSDK disponível:", typeof CoinbaseWalletSDK !== 'undefined');
+  console.log("window.ethereum disponível:", typeof window.ethereum !== 'undefined');
   console.log("===== Fim da verificação =====");
-});
-
-document.addEventListener('DOMContentLoaded', function() {
-  // Criar botão de debug
-  const debugBtn = document.createElement('button');
-  debugBtn.id = 'debug-button';
-  debugBtn.textContent = 'Debug Wallet';
-  debugBtn.style.position = 'fixed';
-  debugBtn.style.bottom = '20px';
-  debugBtn.style.right = '20px';
-  debugBtn.style.zIndex = '1000';
-  debugBtn.style.padding = '8px 16px';
-  debugBtn.style.background = '#6c757d';
-  debugBtn.style.color = 'white';
-  debugBtn.style.border = 'none';
-  debugBtn.style.borderRadius = '4px';
-  debugBtn.style.cursor = 'pointer';
   
-  document.body.appendChild(debugBtn);
+  // Executar verificação silenciosa de diagnóstico
+  silentDebugWalletConnection();
+});
   // Adicionar handler para o botão de debug
   debugBtn.addEventListener('click', debugWalletConnection);
   
