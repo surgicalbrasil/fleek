@@ -33,9 +33,40 @@ document.addEventListener('DOMContentLoaded', function() {
   debugBtn.style.cursor = 'pointer';
   
   document.body.appendChild(debugBtn);
-  
-  // Adicionar handler para o botão de debug
+    // Adicionar handler para o botão de debug
   debugBtn.addEventListener('click', debugWalletConnection);
+  
+  // Adicionar botão de conexão direta para teste
+  const directBtn = document.createElement('button');
+  directBtn.id = 'direct-connect-button';
+  directBtn.textContent = 'Conectar Metamask Diretamente';
+  directBtn.style.position = 'fixed';
+  directBtn.style.bottom = '60px';
+  directBtn.style.right = '20px';
+  directBtn.style.zIndex = '1000';
+  directBtn.style.padding = '8px 16px';
+  directBtn.style.background = '#28a745';
+  directBtn.style.color = 'white';
+  directBtn.style.border = 'none';
+  directBtn.style.borderRadius = '4px';
+  directBtn.style.cursor = 'pointer';
+  
+  document.body.appendChild(directBtn);
+  
+  // Adicionar handler para conectar diretamente
+  directBtn.addEventListener('click', async () => {
+    try {
+      if (window.walletConnect && window.walletConnect.connectDirect) {
+        const result = await window.walletConnect.connectDirect();
+        alert(`Conectado diretamente! Endereço: ${result.account}`);
+      } else {
+        alert("Método de conexão direta não está disponível");
+      }
+    } catch (error) {
+      console.error("Erro na conexão direta:", error);
+      alert(`Erro na conexão direta: ${error.message}`);
+    }
+  });
 });
 
 // Função para debug da conexão de carteira

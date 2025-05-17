@@ -86,10 +86,21 @@ document.getElementById("login-button").addEventListener("click", async () => {
     } catch (error) {
       console.error("Erro ao realizar login:", error);
       alert("Erro ao realizar login.");
-    }
-  } else if (currentAuthMethod === 'wallet') {
+    }  } else if (currentAuthMethod === 'wallet') {
     // Conectar via carteira
-    await connectWallet();
+    try {
+      await connectWallet();
+    } catch (error) {
+      console.error("Erro ao conectar via Web3Modal, tentando conexão direta:", error);
+      try {
+        // Tentar conexão direta com Metamask como fallback
+        if (window.walletConnect && window.walletConnect.connectDirect) {
+          await window.walletConnect.connectDirect();
+        }
+      } catch (directError) {
+        console.error("Erro também na conexão direta:", directError);
+      }
+    }
   }
 });
 
