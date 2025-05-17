@@ -112,10 +112,12 @@ export default async function handler(req, res) {
       if (!authorizedWalletsFromSheet.includes(userWallet)) {
         return res.status(403).json({ success: false, error: "Carteira não autorizada." });
       }
+    }    // Buscar e descriptografar o arquivo - usando apenas a URL das variáveis de ambiente
+    const encryptedFileUrl = process.env.ENCRYPTED_FILE_URL;
+    if (!encryptedFileUrl) {
+      return res.status(500).json({ success: false, error: "URL do arquivo não configurada no servidor." });
     }
-
-    // Buscar e descriptografar o arquivo
-    const encryptedFileUrl = process.env.ENCRYPTED_FILE_URL || "https://github.com/surgicalbrasil/fleek/raw/refs/heads/main/files/Paper.encrypted";
+    
     const response = await fetch(encryptedFileUrl);
 
     if (!response.ok) {

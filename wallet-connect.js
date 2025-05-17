@@ -24,8 +24,9 @@ async function getSecureConfig() {
 window.addEventListener('load', async function() {
   try {
     const config = await getSecureConfig();
-    if (config && config.config && config.config.apiKey) {
-      apiKey = config.config.apiKey;
+    if (config && config.config && config.config.apiKeyHash) {
+      // Usando o hash da API key ao invés da key completa
+      apiKey = config.config.apiKeyHash;
       console.log('Configurações carregadas com sucesso');
     } else {
       console.warn('Não foi possível obter as configurações do servidor');

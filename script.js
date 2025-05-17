@@ -1,5 +1,25 @@
 // Inicializar o Magic SDK
-const magic = new Magic("pk_live_20134EF9B8F26232");
+// Obter a chave do Magic SDK de forma segura do backend
+let magicPubKey = null;
+
+async function initMagicSDK() {
+  try {
+    const response = await fetch("/api/get-magic-key");
+    if (response.ok) {
+      const data = await response.json();
+      magicPubKey = data.magicPublicKey;
+      window.magic = new Magic(magicPubKey);
+      console.log("Magic SDK inicializado com sucesso");
+    } else {
+      console.error("Falha ao obter a chave do Magic SDK");
+    }
+  } catch (error) {
+    console.error("Erro ao inicializar Magic SDK:", error);
+  }
+}
+
+// Inicializar imediatamente
+initMagicSDK();
 
 // Estado da autenticação
 let currentAuthMethod = 'email';
