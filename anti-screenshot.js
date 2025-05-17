@@ -37,7 +37,8 @@ class AntiScreenshotSystem {
     }
   }
   
-  // Configurar o sistema  setup() {
+  // Configurar o sistema
+  setup() {
     this.pdfViewer = document.getElementById('pdf-viewer');
     
     // Adicionar classe de modo seguro
