@@ -5,7 +5,7 @@ class AntiScreenshotSystem {
     this.isSecure = false;
     this.captureDetected = false;
     this.captureAttempts = 0;
-    this.maxAttempts = 3;
+    this.maxAttempts = 1; // Política mais rigorosa: encerrar na primeira tentativa
     this.blurTimeout = null;
     
     // Elementos DOM
@@ -71,15 +71,14 @@ class AntiScreenshotSystem {
     this.watermark.className = 'doc-watermark';
     document.body.appendChild(this.watermark);
   }
-  
-  // Criar caixa de alerta
+    // Criar caixa de alerta
   createAlertBox() {
     this.alertBox = document.createElement('div');
     this.alertBox.className = 'security-alert';
     this.alertBox.innerHTML = `
       <h3>Alerta de Segurança</h3>
       <p>Detectamos uma tentativa de captura de tela. Este documento é confidencial e protegido contra cópias não autorizadas.</p>
-      <p>Tentativa <span id="attempt-counter">1</span> de ${this.maxAttempts}. ${this.maxAttempts} tentativas resultarão no encerramento da sessão.</p>
+      <p class="critical-alert">AVISO: Qualquer tentativa de captura de tela resultará no encerramento imediato da sessão.</p>
       <button id="close-alert">Entendi</button>
     `;
     document.body.appendChild(this.alertBox);
@@ -196,13 +195,12 @@ class AntiScreenshotSystem {
       this.triggerCaptureProtection();
     }
   }
-  
-  // Acionar proteção contra captura
+    // Acionar proteção contra captura
   triggerCaptureProtection() {
     this.captureAttempts += 1;
     this.captureDetected = true;
     
-    console.warn(`Tentativa de captura de tela detectada (${this.captureAttempts}/${this.maxAttempts})`);
+    console.warn(`Tentativa de captura de tela detectada - Encerrando sessão imediatamente`);
     
     // Ativar overlay
     this.overlay.classList.add('active');
@@ -212,26 +210,34 @@ class AntiScreenshotSystem {
       this.pdfViewer.classList.add('capture-detected');
     }
     
-    // Mostrar alerta
-    this.showAlert();
+    // Mostrar alerta brevemente antes de encerrar
+    this.showAlertBeforeTermination();
     
-    // Verificar número de tentativas
-    if (this.captureAttempts >= this.maxAttempts) {
+    // Encerrar a sessão imediatamente após a primeira tentativa
+    setTimeout(() => {
       this.terminateSession();
-    }
-    
-    // Resetar o estado após um tempo
-    clearTimeout(this.blurTimeout);
-    this.blurTimeout = setTimeout(this.resetCaptureState, 5000);
+    }, 1500); // Pequeno delay para o usuário ver o alerta
   }
-  
-  // Mostrar alerta de segurança
+    // Mostrar alerta de segurança
   showAlert() {
     // Atualizar contador de tentativas
     const counter = this.alertBox.querySelector('#attempt-counter');
     if (counter) {
       counter.textContent = this.captureAttempts;
     }
+    
+    // Mostrar alerta
+    this.alertBox.classList.add('active');
+  }
+  
+  // Mostrar alerta de encerramento imediato
+  showAlertBeforeTermination() {
+    // Modificar o conteúdo do alerta para indicar encerramento imediato
+    this.alertBox.innerHTML = `
+      <h3>Alerta de Segurança Crítico</h3>
+      <p>Tentativa de captura de tela detectada. Este documento é estritamente confidencial.</p>
+      <p class="critical-alert">A sessão será encerrada imediatamente por motivos de segurança.</p>
+    `;
     
     // Mostrar alerta
     this.alertBox.classList.add('active');
@@ -251,18 +257,32 @@ class AntiScreenshotSystem {
       this.pdfViewer.classList.remove('capture-detected');
     }
   }
-  
-  // Encerrar sessão após múltiplas tentativas
+    // Encerrar sessão imediatamente após tentativa de captura de tela
   terminateSession() {
-    alert("Múltiplas tentativas de captura de tela detectadas. A sessão será encerrada por motivos de segurança.");
+    console.error("Violação de segurança: Tentativa de captura de tela detectada. Encerrando sessão.");
+    
+    // Registrar evento de segurança (poderia ser enviado para um servidor de logs)
+    const securityEvent = {
+      type: 'security_violation',
+      action: 'screenshot_attempt',
+      timestamp: new Date().toISOString(),
+      userInfo: {
+        authType: sessionStorage.getItem('auth-type') || 'unknown',
+        // Não incluir informações sensíveis como email ou wallet no log
+      }
+    };
+    console.warn('Evento de segurança registrado:', securityEvent);
     
     // Limpar sessão
     sessionStorage.clear();
     
+    // Aplicar efeito visual de encerramento de sessão
+    document.body.classList.add('security-lockdown');
+    
     // Redirecionar para página inicial
     setTimeout(() => {
       window.location.reload();
-    }, 1000);
+    }, 1500);
   }
 }
 

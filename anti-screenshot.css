@@ -89,3 +89,36 @@
   border-radius: 4px;
   cursor: pointer;
 }
+
+/* Estilos para o alerta crítico */
+.critical-alert {
+  color: #dc3545;
+  font-weight: bold;
+  margin-top: 10px;
+  animation: blink 1s infinite;
+}
+
+@keyframes blink {
+  0% { opacity: 1.0; }
+  50% { opacity: 0.5; }
+  100% { opacity: 1.0; }
+}
+
+/* Efeito visual de encerramento de sessão por segurança */
+.security-lockdown {
+  animation: security-shutdown 1.5s forwards;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+@keyframes security-shutdown {
+  0% { 
+    filter: none; 
+  }
+  20% {
+    filter: blur(2px) brightness(0.9);
+  }
+  100% { 
+    filter: blur(20px) brightness(0.1);
+  }
+}
