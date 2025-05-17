@@ -87,18 +87,18 @@ document.getElementById("login-button").addEventListener("click", async () => {
       console.error("Erro ao realizar login:", error);
       alert("Erro ao realizar login.");
     }  } else if (currentAuthMethod === 'wallet') {
-    // Conectar via carteira
+    // Conectar via carteira (apenas MetaMask)
     try {
       await connectWallet();
     } catch (error) {
-      console.error("Erro ao conectar via Web3Modal, tentando conexão direta:", error);
-      try {
-        // Tentar conexão direta com Metamask como fallback
-        if (window.walletConnect && window.walletConnect.connectDirect) {
-          await window.walletConnect.connectDirect();
-        }
-      } catch (directError) {
-        console.error("Erro também na conexão direta:", directError);
+      console.error("Erro ao conectar com MetaMask:", error);
+      
+      if (error.message.includes("MetaMask não está instalada")) {
+        alert("Por favor, instale a extensão MetaMask para usar esta funcionalidade.");
+      } else if (error.message.includes("User rejected")) {
+        alert("Você rejeitou a solicitação de conexão com a MetaMask.");
+      } else {
+        alert("Erro ao conectar com a MetaMask. Por favor, tente novamente.");
       }
     }
   }

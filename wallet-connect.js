@@ -1,91 +1,39 @@
 // wallet-connect.js - Gerenciador de conexão de carteiras
 
-// Configuração da chave da Infura (anteriormente usávamos Alchemy)
-const INFURA_API_KEY = "82e06acf7f54495f873137ea30e21300";
-
 // Estado da conexão
 let provider = null;
 let web3Instance = null;
 let currentAccount = null;
 let chainId = null;
 
-// Configuração das opções do provedor para Web3Modal
+// Configuração simplificada - apenas MetaMask
 const providerOptions = {
-  // MetaMask é incluída por padrão (não precisa configurar)
-    // WalletConnect
-  walletconnect: {
-    package: WalletConnectProvider.default,
-    options: {
-      rpc: {
-        1: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
-        5: `https://goerli.infura.io/v3/${INFURA_API_KEY}`,
-        137: `https://polygon-mainnet.infura.io/v3/${INFURA_API_KEY}`
-      },
-      chainId: 1,
-      network: "mainnet"
-    }
-  },
-    // Coinbase Wallet 
-  coinbasewallet: {
-    package: window.CoinbaseWalletSDK,
-    options: {
-      appName: "Confidential Viewer",
-      rpc: {
-        1: `https://mainnet.infura.io/v3/${INFURA_API_KEY}`,
-        137: `https://polygon-mainnet.infura.io/v3/${INFURA_API_KEY}`
-      },
-      chainId: 1,
-      darkMode: false
-    }
-  }
+  // Deixar vazio para usar apenas MetaMask
+  // MetaMask é incluída por padrão, sem necessidade de configuração adicional
 };
 
-// Inicializar Web3Modal
-let web3Modal;
-
-// Função para inicializar o modal
-function initWeb3Modal() {
+// Função para verificar se a MetaMask está disponível
+function checkMetaMaskAvailability() {
   try {
-    console.log("Verificando disponibilidade do Web3Modal...");
+    console.log("Verificando disponibilidade da MetaMask...");
     
-    // Verificar se o objeto Web3Modal existe globalmente
-    if (typeof Web3Modal === 'undefined') {
-      console.error("Web3Modal não está disponível. Verifique se a biblioteca foi carregada corretamente.");
-      
-      // Tentar usar window.ethereum diretamente se estiver disponível
-      if (window.ethereum) {
-        console.log("Web3Modal não está disponível, mas ethereum foi detectado. Tentando usar diretamente...");
-        return true; // Continue mesmo sem Web3Modal
-      } else {
-        throw new Error("Web3Modal não está disponível");
-      }
+    if (window.ethereum) {
+      console.log("MetaMask detectada ✅");
+      return true;
+    } else {
+      console.error("MetaMask não está disponível. Por favor, instale a extensão MetaMask.");
+      return false;
     }
-    
-    console.log("Criando instância do Web3Modal...");
-    web3Modal = new Web3Modal({
-      cacheProvider: true, // Muito importante! Permite reconectar automaticamente
-      theme: {
-        background: "#f8f9fa",
-        main: "#007bff",
-        secondary: "#6c757d",
-        border: "#e9ecef",
-        hover: "#adb5bd"
-      },
-      providerOptions: providerOptions
-    });
-    
-    console.log("Web3Modal inicializado com sucesso");
   } catch (error) {
-    console.error("Erro ao inicializar Web3Modal:", error);
-    alert("Erro ao inicializar o seletor de carteiras. Por favor, tente novamente mais tarde ou entre em contato com o suporte.");
-    throw error;
+    console.error("Erro ao verificar disponibilidade da MetaMask:", error);
+    return false;
   }
 }
 
-// Função para conectar à carteira
+// Função para conectar à carteira (apenas MetaMask)
 async function connectWallet() {
   try {
-    console.log("Conectando carteira...");
+    console.log("Conectando carteira (MetaMask)...");
 
     // Verificar se o objeto Web3 está disponível
     if (typeof Web3 === 'undefined') {
@@ -94,29 +42,18 @@ async function connectWallet() {
       throw new Error("Web3 não está disponível");
     }
 
-    // Inicializar o modal se ainda não foi inicializado
-    if (!web3Modal) {
-      console.log("Inicializando Web3Modal...");
-      try {
-        initWeb3Modal();
-      } catch (error) {
-        console.error("Falha ao inicializar Web3Modal, tentando conectar diretamente com Metamask...");
-      }
+    // Verificar se a MetaMask está instalada
+    if (!window.ethereum) {
+      console.error("MetaMask não está instalada");
+      alert("MetaMask não está instalada. Por favor, instale a extensão MetaMask para continuar.");
+      throw new Error("MetaMask não está instalada");
     }
     
-    // Verificar se devemos usar o provider do navegador diretamente (fallback)
-    console.log("Solicitando conexão ao provedor...");
+    console.log("Solicitando acesso à MetaMask...");
     
-    // Se o web3Modal não estiver disponível, tente usar ethereum diretamente
-    if (!web3Modal && window.ethereum) {
-      console.log("Usando ethereum diretamente...");
-      provider = window.ethereum;
-      await window.ethereum.request({ method: 'eth_requestAccounts' });
-    } else if (web3Modal) {
-      provider = await web3Modal.connect();
-    } else {
-      throw new Error("Nenhum provedor Web3 disponível");
-    }
+    // Conectar diretamente via MetaMask
+    provider = window.ethereum;
+    await window.ethereum.request({ method: 'eth_requestAccounts' });
     
     if (!provider) {
       console.error("Nenhum provedor selecionado");
@@ -174,15 +111,11 @@ async function connectWallet() {
   }
 }
 
-// Função para desconectar carteira
+// Função para desconectar carteira (MetaMask)
 async function disconnectWallet() {
   try {
-    if (provider?.close) {
-      await provider.close();
-    }
-    
-    // Limpar cache
-    await web3Modal.clearCachedProvider();
+    // Nota: MetaMask não tem uma função nativa de "disconnect"
+    // Só podemos limpar nosso estado local
     
     // Resetar estado
     provider = null;
@@ -190,7 +123,10 @@ async function disconnectWallet() {
     currentAccount = null;
     chainId = null;
     
-    console.log("Carteira desconectada com sucesso");
+    // Limpar qualquer armazenamento local
+    localStorage.removeItem('WEB3_CONNECT_CACHED_PROVIDER');
+    
+    console.log("Estado da carteira resetado com sucesso");
   } catch (error) {
     console.error("Erro ao desconectar carteira:", error);
   }
@@ -237,16 +173,21 @@ function setupEventListeners() {
   });
 }
 
-// Verificar se o usuário já conectou a carteira anteriormente
+// Verificar se o usuário já está conectado com a MetaMask
 async function restoreConnection() {
   try {
-    if (!web3Modal) {
-      initWeb3Modal();
+    // Verificar se a MetaMask está disponível
+    if (!window.ethereum) {
+      console.log("MetaMask não está disponível para restauração");
+      return null;
     }
     
-    // Verificar se existe um provedor em cache
-    if (web3Modal.cachedProvider) {
-      console.log("Provedor em cache encontrado, restaurando conexão...");
+    // Verificar se há contas já conectadas na MetaMask
+    const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+    
+    if (accounts && accounts.length > 0) {
+      console.log("Conta da MetaMask já conectada, restaurando conexão...");
+      // Usar a conexão existente
       const connection = await connectWallet();
       return connection;
     }
@@ -279,90 +220,24 @@ function formatWalletAddress(address) {
   return `${address.substring(0, 6)}...${address.substring(address.length - 4)}`;
 }
 
-// Verificar disponibilidade das bibliotecas e configurar fallback
+// Verificar disponibilidade da MetaMask ao carregar
 window.addEventListener('load', function() {
-  console.log("Verificando disponibilidade das bibliotecas Web3...");
+  console.log("Verificando disponibilidade da MetaMask...");
   
-  // Verificar Web3Modal
-  if (typeof Web3Modal === 'undefined') {
-    console.warn("Web3Modal não detectado. Configurando fallback...");
-    
-    // Criar uma versão simples do Web3Modal que usa diretamente o provider do navegador
-    window.Web3Modal = class FallbackWeb3Modal {
-      constructor(options) {
-        this.options = options;
-        this.cachedProvider = localStorage.getItem('WEB3_CONNECT_CACHED_PROVIDER');
-        console.log("FallbackWeb3Modal criado");
-      }
-      
-      async connect() {
-        if (window.ethereum) {
-          console.log("Solicitando contas via ethereum...");
-          await window.ethereum.request({ method: 'eth_requestAccounts' });
-          localStorage.setItem('WEB3_CONNECT_CACHED_PROVIDER', 'injected');
-          return window.ethereum;
-        } else {
-          throw new Error("Nenhum provider Web3 encontrado");
-        }
-      }
-      
-      async clearCachedProvider() {
-        localStorage.removeItem('WEB3_CONNECT_CACHED_PROVIDER');
-      }
-    };
-    
-    console.log("Web3Modal substituído por fallback");
+  if (window.ethereum) {
+    console.log("MetaMask disponível ✅");
+  } else {
+    console.warn("MetaMask não detectada ❌");
+    alert("MetaMask não detectada. Para usar a funcionalidade de carteira, por favor instale a extensão MetaMask.");
   }
   
-  // Verificar outras bibliotecas necessárias
-  console.log("Verificação de bibliotecas Web3:");
-  console.log("- Web3 disponível:", typeof Web3 !== 'undefined');
-  console.log("- ethereum disponível:", typeof window.ethereum !== 'undefined');
-  console.log("- WalletConnectProvider disponível:", typeof WalletConnectProvider !== 'undefined');
-  console.log("- CoinbaseWalletSDK disponível:", typeof CoinbaseWalletSDK !== 'undefined');
+  // Verificar Web3
+  console.log("Web3 disponível:", typeof Web3 !== 'undefined' ? "Sim ✅" : "Não ❌");
 });
-
-// Função para conectar diretamente com Metamask (fallback)
-async function connectDirectWithMetamask() {
-  try {
-    console.log("Tentando conexão direta com Metamask...");
-    
-    if (!window.ethereum) {
-      throw new Error("Metamask não está instalado");
-    }
-    
-    // Solicitar contas
-    const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
-    
-    if (!accounts || accounts.length === 0) {
-      throw new Error("Nenhuma conta disponível");
-    }
-    
-    // Configurar estado
-    provider = window.ethereum;
-    web3Instance = new Web3(provider);
-    currentAccount = accounts[0];
-    chainId = await web3Instance.eth.getChainId();
-    
-    console.log("Conectado diretamente à Metamask:", currentAccount);
-    
-    // Configurar eventos
-    setupEventListeners();
-    
-    return {
-      account: currentAccount,
-      chainId: chainId
-    };
-  } catch (error) {
-    console.error("Erro ao conectar diretamente com Metamask:", error);
-    throw error;
-  }
-}
 
 // Exportar funções para uso global
 window.walletConnect = {
   connect: connectWallet,
-  connectDirect: connectDirectWithMetamask, // Adicionar método alternativo
   disconnect: disconnectWallet,
   restore: restoreConnection,
   getBalance: getWalletBalance,

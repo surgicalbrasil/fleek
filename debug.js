@@ -33,54 +33,51 @@ document.addEventListener('DOMContentLoaded', function() {
   debugBtn.style.cursor = 'pointer';
   
   document.body.appendChild(debugBtn);
-    // Adicionar handler para o botão de debug
+  // Adicionar handler para o botão de debug
   debugBtn.addEventListener('click', debugWalletConnection);
   
-  // Adicionar botão de conexão direta para teste
-  const directBtn = document.createElement('button');
-  directBtn.id = 'direct-connect-button';
-  directBtn.textContent = 'Conectar Metamask Diretamente';
-  directBtn.style.position = 'fixed';
-  directBtn.style.bottom = '60px';
-  directBtn.style.right = '20px';
-  directBtn.style.zIndex = '1000';
-  directBtn.style.padding = '8px 16px';
-  directBtn.style.background = '#28a745';
-  directBtn.style.color = 'white';
-  directBtn.style.border = 'none';
-  directBtn.style.borderRadius = '4px';
-  directBtn.style.cursor = 'pointer';
+  // Adicionar botão de teste MetaMask
+  const metamaskBtn = document.createElement('button');
+  metamaskBtn.id = 'metamask-button';
+  metamaskBtn.textContent = 'Testar Conexão MetaMask';
+  metamaskBtn.style.position = 'fixed';
+  metamaskBtn.style.bottom = '60px';
+  metamaskBtn.style.right = '20px';
+  metamaskBtn.style.zIndex = '1000';
+  metamaskBtn.style.padding = '8px 16px';
+  metamaskBtn.style.background = '#ff9f1c';
+  metamaskBtn.style.color = 'white';
+  metamaskBtn.style.border = 'none';
+  metamaskBtn.style.borderRadius = '4px';
+  metamaskBtn.style.cursor = 'pointer';
   
-  document.body.appendChild(directBtn);
+  document.body.appendChild(metamaskBtn);
   
-  // Adicionar handler para conectar diretamente
-  directBtn.addEventListener('click', async () => {
+  // Adicionar handler para testar conexão MetaMask
+  metamaskBtn.addEventListener('click', async () => {
     try {
-      if (window.walletConnect && window.walletConnect.connectDirect) {
-        const result = await window.walletConnect.connectDirect();
-        alert(`Conectado diretamente! Endereço: ${result.account}`);
+      if (window.ethereum) {
+        const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+        alert(`MetaMask conectada! Endereço: ${accounts[0]}`);
       } else {
-        alert("Método de conexão direta não está disponível");
+        alert("MetaMask não está instalada. Por favor, instale a extensão MetaMask.");
       }
     } catch (error) {
-      console.error("Erro na conexão direta:", error);
-      alert(`Erro na conexão direta: ${error.message}`);
+      console.error("Erro na conexão com MetaMask:", error);
+      alert(`Erro na conexão: ${error.message}`);
     }
   });
 });
 
 // Função para debug da conexão de carteira
 async function debugWalletConnection() {
-  console.log('=== Iniciando debug da conexão de carteira ===');
+  console.log('=== Iniciando debug da conexão de carteira (MetaMask) ===');
   
   try {
     // Verificar disponibilidade das bibliotecas
     console.log('1. Verificando bibliotecas:');
     console.log('   - Web3 disponível:', typeof Web3 !== 'undefined' ? 'Sim ✅' : 'Não ❌');
-    console.log('   - WalletConnect disponível:', typeof WalletConnectProvider !== 'undefined' ? 'Sim ✅' : 'Não ❌');
-    console.log('   - Web3Modal disponível:', typeof Web3Modal !== 'undefined' ? 'Sim ✅' : 'Não ❌');
-    console.log('   - CoinbaseWalletSDK disponível:', typeof CoinbaseWalletSDK !== 'undefined' ? 'Sim ✅' : 'Não ❌');
-    console.log('   - AlchemyWeb3 disponível:', typeof AlchemyWeb3 !== 'undefined' ? 'Sim ✅' : 'Não ❌');
+    console.log('   - window.ethereum disponível:', typeof window.ethereum !== 'undefined' ? 'Sim ✅' : 'Não ❌');
     
     // Verificar módulo wallet-connect
     console.log('2. Verificando módulo wallet-connect:');
