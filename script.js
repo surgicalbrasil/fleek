@@ -1,44 +1,12 @@
-// Inicializar o Magic SDK
-// Obter a chave do Magic SDK de forma segura do backend
-let magicPubKey = null;
+// Magic SDK agora é importado como um módulo
+// Referência para acessar o Magic: window.magicSDK
 
-async function initMagicSDK() {
-  try {
-    // Tenta buscar a chave do backend, com fallback para desenvolvimento local
-    const response = await fetch("/api/get-magic-key").catch(err => {
-      console.warn("Erro ao buscar chave do Magic SDK no servidor, usando fallback:", err);
-      return null;
-    });
-    
-    if (response && response.ok) {
-      const data = await response.json();
-      magicPubKey = data.magicPublicKey;
-    } else {
-      // Chave de fallback para desenvolvimento local
-      console.warn("Usando chave Magic SDK de desenvolvimento");
-      magicPubKey = "pk_live_20134EF9B8F26232"; // Usando a chave do .env ou .env.example
-    }
-    
-    if (!magicPubKey) {
-      console.error("Chave Magic SDK não encontrada. Verificando se a biblioteca está carregada...");
-      if (typeof Magic === 'undefined') {
-        console.error("A biblioteca Magic SDK não foi carregada corretamente");
-        alert("Erro ao carregar o Magic SDK. Verifique sua conexão com a internet e tente novamente.");
-        return;
-      }
-      throw new Error("Magic SDK Public Key não disponível");
-    }
-    
-    window.magic = new Magic(magicPubKey);
-    console.log("Magic SDK inicializado com sucesso");
-  } catch (error) {
-    console.error("Erro ao inicializar Magic SDK:", error);
-    alert("Erro ao inicializar sistema de autenticação. Por favor, recarregue a página ou tente novamente mais tarde.");
-  }
-}
-
-// Inicializar imediatamente
-initMagicSDK();
+// Inicializar o Magic SDK quando a página carregar
+document.addEventListener('DOMContentLoaded', async () => {
+  // O módulo magic-sdk.js já está disponível como window.magicSDK
+  await window.magicSDK.initMagicSDK();
+  console.log("Magic SDK inicializado via módulo");
+});
 
 // Estado da autenticação
 let currentAuthMethod = 'email';
@@ -112,20 +80,23 @@ document.getElementById("login-button").addEventListener("click", async () => {
     if (!isAuthorized) {
       alert("E-mail não autorizado. Assine o NDA.");
       return;
-    }
-
-    try {
+    }    try {
       console.log("Realizando login com email...");
-      await magic.auth.loginWithMagicLink({ email });
-      const token = await magic.user.getIdToken();
-      sessionStorage.setItem("auth-type", "email");
-      sessionStorage.setItem("magic-token", token);
-      document.getElementById("user-email").disabled = true;
-      alert("Login realizado com sucesso!");
+      const success = await window.magicSDK.loginWithMagic(email);
+      
+      if (success) {
+        const token = await window.magicSDK.magic.user.getIdToken();
+        sessionStorage.setItem("auth-type", "email");
+        sessionStorage.setItem("magic-token", token);
+        document.getElementById("user-email").disabled = true;
+        alert("Login realizado com sucesso!");
+      } else {
+        alert("Falha no login. Verifique seu email e tente novamente.");
+      }
     } catch (error) {
       console.error("Erro ao realizar login:", error);
       alert("Erro ao realizar login.");
-    }  } else if (currentAuthMethod === 'wallet') {
+    }} else if (currentAuthMethod === 'wallet') {
     // Conectar via carteira (apenas MetaMask)
     try {
       await connectWallet();
@@ -313,9 +284,8 @@ document.getElementById("logout-button").addEventListener("click", async () => {
   try {
     console.log("Realizando logout...");
     const authType = sessionStorage.getItem("auth-type");
-    
-    if (authType === "email") {
-      await magic.user.logout();
+      if (authType === "email") {
+      await window.magicSDK.logoutFromMagic();
     } else if (authType === "wallet") {
       await disconnectWallet();
     }
@@ -495,9 +465,8 @@ async function initializeApp() {
     // Verificar se o token ainda é válido
     const token = sessionStorage.getItem("magic-token");
     if (token) {
-      try {
-        // Tentar fazer uma operação simples para verificar o token
-        const isLoggedIn = await magic.user.isLoggedIn();
+      try {        // Tentar fazer uma operação simples para verificar o token
+        const isLoggedIn = await window.magicSDK.isMagicLoggedIn();
         if (isLoggedIn) {
           console.log("Sessão de email válida");
           document.getElementById("user-email").disabled = true;
