@@ -39,6 +39,9 @@ async function initApp() {
     // Configurar listeners de eventos
     setupEventListeners();
     
+    // Verificar estado de autenticação
+    await checkInitialAuthState();
+    
     appInitialized = true;
     console.log("Aplicação inicializada com sucesso");
     
@@ -158,6 +161,32 @@ function setupEventListeners() {
       event.detail.callback(email);
     }
   });
+}
+
+/**
+ * Verifica o estado inicial de autenticação após inicializar a aplicação
+ * @returns {Promise<void>}
+ */
+async function checkInitialAuthState() {
+  try {
+    console.log("Verificando estado inicial de autenticação...");
+    
+    // Verificar se usuário já está logado com Magic
+    const isLoggedIn = await checkUserLoggedIn();
+    
+    // Verificar se uma carteira já está conectada
+    const walletConnected = isWalletConnected();
+    
+    if (isLoggedIn || walletConnected) {
+      console.log("Usuário já está autenticado:", { magicLogin: isLoggedIn, walletConnected });
+      // A UI já deve ter sido atualizada pelos eventos disparados por checkUserLoggedIn()
+      // ou pela inicialização do wallet-connector
+    } else {
+      console.log("Usuário não está autenticado");
+    }
+  } catch (error) {
+    console.error("Erro ao verificar estado de autenticação:", error);
+  }
 }
 
 // Inicializar aplicação quando o DOM estiver carregado

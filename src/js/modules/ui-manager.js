@@ -19,6 +19,12 @@ function initUI() {
   // Armazenar referências aos elementos da UI
   cacheElements();
   
+  // Configurar estado inicial dos botões
+  ui.elements.loginButton.style.display = 'block';
+  ui.elements.logoutButton.style.display = 'none';
+  ui.elements.acessarArquivo.style.display = 'none';
+  ui.elements.cadastroMetaverso.style.display = 'none';
+  
   // Configurar botões de alternância de autenticação
   setupAuthToggle();
   
@@ -177,10 +183,13 @@ function setupAuthListeners() {
   window.addEventListener('auth:logout', () => {
     updateUIAfterLogout();
   });
-  
-  // Restauração de sessão
+    // Restauração de sessão
   window.addEventListener('auth:sessionRestored', (event) => {
-    updateUIAfterLogin(event.detail);
+    console.log("Sessão restaurada:", event.detail);
+    updateUIAfterLogin({
+      method: 'email',
+      user: event.detail.user
+    });
   });
   
   // Conexão de carteira bem-sucedida
@@ -238,6 +247,8 @@ function setupPdfViewerListeners() {
  * @returns {void}
  */
 function updateUIAfterLogin(detail) {
+  console.log("Atualizando UI após login:", detail);
+  
   // Atualizar UI baseado no método de login
   const method = detail.method || 'email';
   
@@ -257,12 +268,14 @@ function updateUIAfterLogin(detail) {
   
   // Definir método correto
   ui.currentAuthMethod = method;
-  
-  // Mostrar botões pós-login
+    // Atualizar estado dos botões imediatamente
   ui.elements.loginButton.style.display = 'none';
   ui.elements.logoutButton.style.display = 'block';
   ui.elements.acessarArquivo.style.display = 'block';
   ui.elements.cadastroMetaverso.style.display = 'block';
+  
+  // Registrar estado da UI para depuração
+  debugUIState();
   
   // Desativar toggles de autenticação
   ui.elements.authToggles.forEach(toggle => {
@@ -283,12 +296,14 @@ function updateUIAfterLogout() {
   // Ocultar informações da carteira
   ui.elements.walletInfo.style.display = 'none';
   ui.elements.walletAddress.textContent = '';
-  
-  // Resetar botões
+    // Resetar botões
   ui.elements.loginButton.style.display = 'block';
   ui.elements.loginButton.textContent = 'Fazer Login';
   ui.elements.logoutButton.style.display = 'none';
   ui.elements.acessarArquivo.style.display = 'none';
+  
+  // Registrar estado da UI para depuração
+  debugUIState();
   ui.elements.cadastroMetaverso.style.display = 'none';
   
   // Reativar toggles de autenticação
@@ -385,11 +400,28 @@ function updateAuthDisplay(method) {
   }
 }
 
+/**
+ * Mostra o estado atual da UI no console para depuração
+ * @returns {void}
+ */
+function debugUIState() {
+  console.log("Estado atual da UI:", {
+    currentAuthMethod: ui.currentAuthMethod,
+    loginButton: ui.elements.loginButton?.style.display,
+    logoutButton: ui.elements.logoutButton?.style.display,
+    emailForm: ui.elements.emailForm?.style.display,
+    walletInfo: ui.elements.walletInfo?.style.display,
+    acessarArquivo: ui.elements.acessarArquivo?.style.display,
+    cadastroMetaverso: ui.elements.cadastroMetaverso?.style.display
+  });
+}
+
 // Exportar funções do módulo
 export {
   initUI,
   showError,
   showPdfViewer,
   updateWalletInfo,
-  getCurrentAuthMethod
+  getCurrentAuthMethod,
+  debugUIState
 };
