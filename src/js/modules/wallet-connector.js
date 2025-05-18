@@ -465,8 +465,15 @@ export {
   initWalletConnector,
   connectWallet,
   disconnectWallet,
-  isWalletConnected,
   getWalletAddress,
-  getWalletBalance,
-  updateWalletInfo
+  isWalletConnected,
+  getWalletChainId,
+  restoreWalletConnection
 };
+
+// Adicionar listener para eventos de wallet
+window.addEventListener('wallet:getAddress', (event) => {
+  if (event.detail && typeof event.detail.callback === 'function') {
+    event.detail.callback(walletAddress || '');
+  }
+});

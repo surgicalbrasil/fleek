@@ -107,8 +107,7 @@ function setupEventListeners() {
       if (!isLoggedIn && !isWalletConnected()) {
         throw new Error("Você precisa estar logado para acessar documentos");
       }
-      
-      // Obter identificador do usuário (email ou carteira)
+        // Obter identificador do usuário (email ou carteira)
       let userIdentifier = '';
       if (getCurrentAuthMethod() === 'email') {
         const authEvent = new CustomEvent('auth:getUserEmail', {
@@ -119,11 +118,17 @@ function setupEventListeners() {
         userIdentifier = getWalletAddress();
       }
       
+      if (!userIdentifier) {
+        throw new Error("Não foi possível identificar o usuário. Por favor, tente fazer login novamente.");
+      }
+      
+      console.log("Identificador do usuário:", userIdentifier);
+      
       // No cenário real, o hash seria usado como chave de descriptografia
       const decryptionKey = `key_${userIdentifier}`;
       
-      // Carregar arquivo criptografado
-      await loadEncryptedFile('Paper.encrypted', decryptionKey);
+      // Carregar arquivo criptografado com autenticação apropriada
+      await loadEncryptedFile('Paper.pdf', decryptionKey);
       
       // Verificar acesso autorizado
       if (!isDocumentAccessAuthorized()) {

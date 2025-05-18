@@ -305,3 +305,37 @@ export {
   getMagicInstance,
   getCurrentUser
 };
+
+// Configurar listeners para eventos de autenticação
+window.addEventListener('auth:getAuthMethod', (event) => {
+  if (event.detail && typeof event.detail.callback === 'function') {
+    event.detail.callback(isLoggedIn ? 'email' : 'wallet');
+  }
+});
+
+window.addEventListener('auth:getToken', async (event) => {
+  if (!isLoggedIn || !magic) {
+    if (event.detail && typeof event.detail.callback === 'function') {
+      event.detail.callback(null);
+    }
+    return;
+  }
+  
+  try {
+    const token = await magic.user.getIdToken();
+    if (event.detail && typeof event.detail.callback === 'function') {
+      event.detail.callback(token);
+    }
+  } catch (error) {
+    console.error("Erro ao obter token:", error);
+    if (event.detail && typeof event.detail.callback === 'function') {
+      event.detail.callback(null);
+    }
+  }
+});
+
+window.addEventListener('auth:getUserEmail', (event) => {
+  if (event.detail && typeof event.detail.callback === 'function') {
+    event.detail.callback(userEmail || '');
+  }
+});

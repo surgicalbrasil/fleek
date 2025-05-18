@@ -242,7 +242,52 @@ async function loadEncryptedFile(fileName, decryptionKey) {
     fileDecryptionKey = decryptionKey;
     
     console.log(`Buscando arquivo: ${fileName}`);
-    const response = await fetch(`/api/get-file?name=${encodeURIComponent(fileName)}`);
+    
+    // Obter método de autenticação atual e dados de autenticação
+    const authMethodEvent = new CustomEvent('auth:getAuthMethod', {
+      detail: { callback: (method) => {} }
+    });
+    
+    let authMethod = '';
+    authMethodEvent.detail.callback = (method) => {
+      authMethod = method;
+    };
+    window.dispatchEvent(authMethodEvent);
+    
+    // Obter token ou wallet baseado no método de autenticação
+    let token = null;
+    let walletAddress = null;
+    
+    if (authMethod === 'email') {
+      const tokenEvent = new CustomEvent('auth:getToken', {
+        detail: { callback: (t) => { token = t; } }
+      });
+      window.dispatchEvent(tokenEvent);
+    } else {
+      // Obter endereço da wallet
+      const walletEvent = new CustomEvent('wallet:getAddress', {
+        detail: { callback: (addr) => { walletAddress = addr; } }
+      });
+      window.dispatchEvent(walletEvent);
+    }
+    
+    // Configuração do request
+    const requestData = {
+      fileName: fileName,
+      authType: authMethod,
+      token: token,
+      walletAddress: walletAddress
+    };
+    
+    console.log("Enviando requisição para obter arquivo:", requestData);
+    
+    const response = await fetch(`/api/get-file`, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json'
+      },
+      body: JSON.stringify(requestData)
+    });
     
     if (!response.ok) {
       throw new Error(`Erro ao buscar arquivo: ${response.statusText}`);
