@@ -15,6 +15,53 @@ Sistema para visualização de documentos confidenciais com autenticação segur
 - Navegador Web moderno (Chrome ou Firefox recomendados)
 - Extensão MetaMask (para autenticação via carteira)
 
+## Nova Estrutura Modular (2025)
+
+O projeto agora está disponível em uma estrutura modular que facilita a manutenção:
+
+```
+fleek/
+├── src/
+│   ├── js/
+│   │   ├── modules/           # Módulos principais
+│   │   │   ├── auth.js        # Autenticação
+│   │   │   ├── config.js      # Configurações
+│   │   │   ├── pdf-viewer.js  # Visualizador de PDF
+│   │   │   ├── ui-manager.js  # Gerenciamento de UI
+│   │   │   └── wallet-connector.js # Conexão de carteiras
+│   │   │
+│   │   ├── utils/             # Utilitários
+│   │   │   └── utils.js       # Funções utilitárias
+│   │   │
+│   │   ├── app.js             # Aplicação principal
+│   │   └── loader.js          # Carregador de compatibilidade
+│   │
+│   └── css/                   # Arquivos CSS (em breve)
+│
+├── api/                       # APIs backend
+├── tests/                     # Arquivos de teste
+└── files/                     # Arquivos (PDFs)
+```
+
+### Como migrar para a estrutura modular
+
+Para migrar do código antigo para a nova estrutura modular:
+
+1. Execute o script de migração:
+   ```
+   migrate-to-modules.bat
+   ```
+
+2. Inicie o servidor com a estrutura modular:
+   ```
+   start-modular.bat
+   ```
+
+3. Para voltar à configuração antiga caso necessário:
+   ```
+   restore-config.bat
+   ```
+
 ## Configuração Rápida
 
 1. **Clone o repositório**:

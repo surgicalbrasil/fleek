@@ -17,6 +17,7 @@
   
   <!-- Magic SDK -->
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk/dist/magic.js"></script>
+  
   <!-- Script de verificação de integridade do sistema -->
   <script src="system-integrity.js"></script>
   
@@ -26,19 +27,18 @@
   <!-- Sistema de proteção contra capturas de tela -->
   <script src="anti-screenshot.js"></script>
   
-  <!-- Wallet Connect Script -->
-  <script src="wallet-connect.js"></script>
-    <!-- Script de monitoramento discreto -->
+  <!-- Script de monitoramento discreto -->
   <script src="wallet-monitor.js"></script>
   
   <!-- Scripts de testes (descomente para executar testes) -->
   <script src="tests/automated-tests.js"></script>
   
-  <!-- Script principal (carregado por último) -->
-  <script src="script.js" defer></script>
+  <!-- Script principal (usando ES modules) -->
+  <script type="module" src="src/js/app.js"></script>
 </head>
 <body>
-  <!-- Cabeçalho -->  <header id="header">
+  <!-- Cabeçalho -->
+  <header id="header">
     <div class="auth-container">
       <div class="auth-options">
         <button class="auth-toggle active" data-auth="email">
@@ -96,18 +96,16 @@
       <div class="step">
         <div class="step-icon">4</div>
         <div class="step-description">
-          Encontre o código no Certificado de Autenticidade “HASHXYZ”: 
+          Encontre o código no Certificado de Autenticidade "HASHXYZ": 
           <a href="https://timestamp.decred.org/results#hashes=fc2c3263c81a53fe1ab467572b0142294797a8d856fffa4712038334cfd0a7af" target="_blank">Certificado</a>.
-        </div>
-      </div>
-      <div class="step">
-        <div class="step-icon">5</div>
-        <div class="step-description">
-          Insira o <strong>hash da transação</strong> no campo para resgatar sua NFT. <br>
-          <strong>Atenção:</strong> O código é pessoal e intransferível. O uso indevido pode gerar penalidades legais.
         </div>
       </div>
     </div>
   </div>
+
+  <!-- Scripts de compatibilidade para navegadores antigos -->
+  <script nomodule>
+    document.body.innerHTML = '<div class="error-message"><h1>Navegador não compatível</h1><p>Este aplicativo requer um navegador moderno que suporte ES modules. Por favor, atualize seu navegador.</p></div>';
+  </script>
 </body>
 </html>

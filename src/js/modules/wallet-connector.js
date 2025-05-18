@@ -1,0 +1,414 @@
+/**
+ * wallet-connector.js
+ * Módulo para gerenciar a conexão com carteiras Web3
+ */
+
+import { getConfig } from '../modules/config.js';
+import { isWeb3Compatible, formatWalletAddress, logAction } from '../utils/utils.js';
+
+// Variáveis privadas do módulo
+let web3Instance = null;
+let walletAddress = null;
+let walletBalance = null;
+let walletChainId = null;
+let isConnected = false;
+let provider = null;
+
+/**
+ * Inicializa o conector de carteira
+ * @returns {Promise<boolean>}
+ */
+async function initWalletConnector() {
+  try {
+    console.log("Inicializando conector de carteira...");
+    
+    // Verificar compatibilidade
+    if (!isWeb3Compatible()) {
+      console.error("Este navegador não suporta Web3");
+      throw new Error("Navegador não compatível com Web3");
+    }
+    
+    // Tentar usar o provedor da Metamask/Web3 se disponível
+    if (window.ethereum) {
+      provider = window.ethereum;
+      console.log("Provedor Web3 encontrado:", provider);
+    } else if (window.web3) {
+      provider = window.web3.currentProvider;
+      console.log("Provedor web3 legado encontrado");
+    } else {
+      console.error("Nenhum provedor Web3 encontrado");
+      throw new Error("Provedor Web3 não encontrado");
+    }
+    
+    // Criar instância Web3
+    if (typeof Web3 !== 'undefined') {
+      web3Instance = new Web3(provider);
+    } else if (typeof web3 !== 'undefined') {
+      web3Instance = new web3.constructor(provider);
+    } else if (window.ethereum) {
+      web3Instance = { eth: window.ethereum };
+    } else {
+      throw new Error("Web3 não está disponível");
+    }
+    
+    // Verificar se já há uma conta conectada
+    try {
+      const accounts = await getAccounts();
+      if (accounts && accounts.length > 0) {
+        walletAddress = accounts[0];
+        await updateWalletInfo();
+        isConnected = true;
+        
+        // Disparar evento de conexão
+        dispatchConnectedEvent();
+      }
+    } catch (error) {
+      console.warn("Nenhuma conta conectada:", error);
+    }
+    
+    // Configurar listeners para eventos da carteira
+    setupWalletEventListeners();
+    
+    return true;
+  } catch (error) {
+    console.error("Erro ao inicializar conector de carteira:", error);
+    return false;
+  }
+}
+
+/**
+ * Configura os listeners para eventos da carteira
+ * @returns {void}
+ */
+function setupWalletEventListeners() {
+  // Escutar eventos de mudança de conta
+  if (provider && provider.on) {
+    provider.on('accountsChanged', handleAccountsChanged);
+    provider.on('chainChanged', handleChainChanged);
+    provider.on('disconnect', handleDisconnect);
+  }
+}
+
+/**
+ * Manipula a mudança de contas
+ * @param {Array<string>} accounts - Lista de contas
+ * @returns {void}
+ */
+async function handleAccountsChanged(accounts) {
+  if (accounts.length === 0) {
+    // Usuário desconectou a carteira
+    handleDisconnect();
+  } else if (accounts[0] !== walletAddress) {
+    walletAddress = accounts[0];
+    await updateWalletInfo();
+    
+    if (isConnected) {
+      dispatchConnectedEvent();
+    }
+  }
+}
+
+/**
+ * Manipula a mudança de rede
+ * @param {string} chainId - ID da rede em formato hexadecimal
+ * @returns {void}
+ */
+async function handleChainChanged(chainId) {
+  walletChainId = chainId;
+  
+  // Converter chainId para formato decimal para exibição
+  const networkId = parseInt(chainId, 16);
+  console.log(`Rede alterada para: ${networkId}`);
+  
+  // Atualizar informações da carteira na nova rede
+  await updateWalletInfo();
+  
+  // Disparar evento de mudança de rede
+  const chainEvent = new CustomEvent('wallet:chainChanged', { 
+    detail: { chainId: networkId } 
+  });
+  window.dispatchEvent(chainEvent);
+}
+
+/**
+ * Manipula a desconexão da carteira
+ * @returns {void}
+ */
+function handleDisconnect() {
+  walletAddress = null;
+  walletBalance = null;
+  isConnected = false;
+  
+  // Disparar evento de desconexão
+  const disconnectEvent = new CustomEvent('wallet:disconnected');
+  window.dispatchEvent(disconnectEvent);
+  
+  console.log("Carteira desconectada");
+}
+
+/**
+ * Conecta à carteira
+ * @returns {Promise<string>} - Endereço da carteira conectada
+ */
+async function connectWallet() {
+  try {
+    if (!provider) {
+      await initWalletConnector();
+    }
+    
+    // Requisitar acesso à conta
+    let accounts;
+    if (provider.request) {
+      // Método EIP-1193
+      accounts = await provider.request({ method: 'eth_requestAccounts' });
+    } else if (web3Instance.eth.requestAccounts) {
+      // Web3 1.0
+      accounts = await web3Instance.eth.requestAccounts();
+    } else {
+      // Fallback legado
+      accounts = await getAccounts();
+    }
+    
+    if (!accounts || accounts.length === 0) {
+      throw new Error("Nenhuma conta autorizada");
+    }
+    
+    walletAddress = accounts[0];
+    await updateWalletInfo();
+    isConnected = true;
+    
+    // Verificar se a carteira está autorizada
+    await checkWalletAuthorization(walletAddress);
+    
+    // Disparar evento de conexão bem sucedida
+    dispatchConnectedEvent();
+    
+    return walletAddress;
+  } catch (error) {
+    console.error("Erro ao conectar carteira:", error);
+    
+    // Disparar evento de falha na conexão
+    const failEvent = new CustomEvent('wallet:connectionFailed', { 
+      detail: { error: error.message } 
+    });
+    window.dispatchEvent(failEvent);
+    
+    throw error;
+  }
+}
+
+/**
+ * Obtém as contas disponíveis
+ * @returns {Promise<Array<string>>}
+ */
+async function getAccounts() {
+  if (!web3Instance || !web3Instance.eth) {
+    throw new Error("Web3 não está inicializado");
+  }
+  
+  try {
+    let accounts;
+    
+    if (typeof web3Instance.eth.getAccounts === 'function') {
+      accounts = await web3Instance.eth.getAccounts();
+    } else if (web3Instance.eth.request) {
+      accounts = await web3Instance.eth.request({ method: 'eth_accounts' });
+    } else if (provider && provider.request) {
+      accounts = await provider.request({ method: 'eth_accounts' });
+    } else {
+      throw new Error("Método de leitura de contas não disponível");
+    }
+    
+    return accounts;
+  } catch (error) {
+    console.error("Erro ao obter contas:", error);
+    return [];
+  }
+}
+
+/**
+ * Atualiza as informações da carteira
+ * @returns {Promise<void>}
+ */
+async function updateWalletInfo() {
+  if (!walletAddress || !web3Instance || !web3Instance.eth) {
+    return;
+  }
+  
+  try {
+    // Obter saldo
+    let balance;
+    
+    if (typeof web3Instance.eth.getBalance === 'function') {
+      balance = await web3Instance.eth.getBalance(walletAddress);
+    } else if (web3Instance.eth.request) {
+      balance = await web3Instance.eth.request({
+        method: 'eth_getBalance',
+        params: [walletAddress, 'latest']
+      });
+    } else if (provider && provider.request) {
+      balance = await provider.request({
+        method: 'eth_getBalance',
+        params: [walletAddress, 'latest']
+      });
+    }
+    
+    // Converter de Wei para Ether
+    if (balance) {
+      if (typeof web3Instance.utils !== 'undefined' && web3Instance.utils.fromWei) {
+        walletBalance = web3Instance.utils.fromWei(balance, 'ether');
+      } else if (typeof web3 !== 'undefined' && web3.utils && web3.utils.fromWei) {
+        walletBalance = web3.utils.fromWei(balance, 'ether');
+      } else {
+        // Fallback manual (1 ether = 10^18 wei)
+        walletBalance = (parseInt(balance, 16) / Math.pow(10, 18)).toFixed(4);
+      }
+    }
+    
+    // Obter ID da rede atual
+    if (!walletChainId) {
+      if (provider && provider.chainId) {
+        walletChainId = provider.chainId;
+      } else if (provider && provider.request) {
+        walletChainId = await provider.request({ method: 'eth_chainId' });
+      } else if (web3Instance.eth.getChainId) {
+        walletChainId = await web3Instance.eth.getChainId();
+      }
+    }
+    
+    logAction('wallet:info_updated', { 
+      address: formatWalletAddress(walletAddress),
+      chainId: walletChainId 
+    });
+  } catch (error) {
+    console.error("Erro ao atualizar informações da carteira:", error);
+  }
+}
+
+/**
+ * Verifica se a carteira está autorizada
+ * @param {string} address - Endereço da carteira
+ * @returns {Promise<boolean>}
+ */
+async function checkWalletAuthorization(address) {
+  try {
+    console.log(`Verificando autorização para carteira: ${formatWalletAddress(address)}`);
+    
+    // Primeiro, verificar lista local de configuração
+    const authorizedWallets = getConfig('authorizedWallets', []);
+    if (authorizedWallets.length > 0) {
+      const isAuthorized = authorizedWallets.some(wallet => 
+        wallet.toLowerCase() === address.toLowerCase());
+      
+      if (isAuthorized) {
+        console.log("Carteira autorizada na configuração local");
+        return true;
+      }
+    }
+    
+    // Verificar no backend
+    const response = await fetch("/api/get-authorized-wallets");
+    if (!response.ok) {
+      throw new Error(`Erro ao acessar o backend: ${response.statusText}`);
+    }
+    
+    const data = await response.json();
+    
+    // Verificar se a resposta contém a lista de carteiras
+    if (!data.wallets || !Array.isArray(data.wallets)) {
+      console.error("Formato inesperado do JSON retornado pelo backend:", data);
+      throw new Error("Erro ao validar autorização da carteira");
+    }
+    
+    // Verificar se a carteira está autorizada
+    const authorized = data.wallets.some(wallet => 
+      wallet.toLowerCase() === address.toLowerCase());
+    
+    console.log("Carteira autorizada?", authorized);
+    
+    if (!authorized) {
+      throw new Error("Carteira não autorizada para acessar o sistema");
+    }
+    
+    return true;
+  } catch (error) {
+    console.error("Erro na validação da carteira:", error);
+    
+    // Disparar evento de carteira não autorizada
+    const authEvent = new CustomEvent('wallet:unauthorized', {
+      detail: { error: error.message }
+    });
+    window.dispatchEvent(authEvent);
+    
+    throw error;
+  }
+}
+
+/**
+ * Dispara evento de carteira conectada
+ * @returns {void}
+ */
+function dispatchConnectedEvent() {
+  const connectedEvent = new CustomEvent('wallet:connected', {
+    detail: {
+      address: walletAddress,
+      balance: walletBalance,
+      chainId: walletChainId
+    }
+  });
+  window.dispatchEvent(connectedEvent);
+}
+
+/**
+ * Desconecta a carteira
+ * @returns {Promise<boolean>}
+ */
+async function disconnectWallet() {
+  try {
+    // Nota: Nem todos os provedores suportam desconexão explícita
+    if (provider && provider.disconnect) {
+      await provider.disconnect();
+    }
+    
+    handleDisconnect();
+    return true;
+  } catch (error) {
+    console.error("Erro ao desconectar carteira:", error);
+    return false;
+  }
+}
+
+/**
+ * Verifica se a carteira está conectada
+ * @returns {boolean}
+ */
+function isWalletConnected() {
+  return isConnected && walletAddress !== null;
+}
+
+/**
+ * Retorna o endereço da carteira
+ * @returns {string|null}
+ */
+function getWalletAddress() {
+  return walletAddress;
+}
+
+/**
+ * Retorna o saldo da carteira
+ * @returns {string|null}
+ */
+function getWalletBalance() {
+  return walletBalance;
+}
+
+// Exportar funções do módulo
+export {
+  initWalletConnector,
+  connectWallet,
+  disconnectWallet,
+  isWalletConnected,
+  getWalletAddress,
+  getWalletBalance,
+  updateWalletInfo
+};

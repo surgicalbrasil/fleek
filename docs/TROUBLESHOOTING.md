@@ -89,6 +89,30 @@ Este guia descreve como resolver os problemas comuns encontrados após a restaur
    - Certifique-se de que o usuário está autenticado antes de tentar acessar o documento
    - Verifique se o email ou wallet está na lista autorizada do Google Sheets
 
+## 6. Problemas com a Estrutura Modular
+
+### Sintomas:
+- Erro "Cannot use import statement outside a module"
+- Scripts não carregam corretamente
+- Eventos entre módulos não funcionam
+
+### Soluções:
+1. **Verifique a configuração do HTML:**
+   - Confirme que o script principal está sendo carregado com `type="module"`
+   - Exemplo: `<script type="module" src="src/js/app.js"></script>`
+
+2. **Teste com o servidor HTTP:**
+   - Execute `start-modular.bat` para iniciar o servidor com suporte a módulos ES6
+   - Acesse via `http://localhost:8080` ao invés de usar o protocolo `file://`
+
+3. **Verifique se há erros de importação:**
+   - Abra o console do navegador (F12)
+   - Procure por erros relacionados a caminhos de importação incorretos
+   - Execute `verify-modules.bat` para verificar a integridade dos módulos
+
+4. **Retorne à versão não-modular se necessário:**
+   - Execute `restore-config.bat` para voltar à versão anterior
+
 ## Dicas Adicionais
 
 1. **Limpe e reinstale tudo:**
@@ -99,7 +123,7 @@ Este guia descreve como resolver os problemas comuns encontrados após a restaur
    - Exemplo: `file:///C:/Users/beelink/Desktop/fleek/index.html?debug=true`
 
 3. **Teste com o servidor local:**
-   - Use sempre o servidor local (execute `start.bat`) para testar as funcionalidades que requerem API
+   - Use sempre o servidor local (execute `start.bat` ou `start-modular.bat`) para testar as funcionalidades que requerem API
 
 ## Contato para Suporte
 
