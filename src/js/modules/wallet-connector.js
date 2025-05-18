@@ -450,6 +450,47 @@ async function disconnectWallet() {
  * @returns {boolean}
  */
 function isWalletConnected() {
+  // Verificação adicional para garantir que a carteira está realmente conectada
+  if (!isConnected || !walletAddress) {
+    return false;
+  }
+  
+  // Verificar se o provedor está disponível
+  if (!provider) {
+    console.warn("Provedor Web3 não está disponível");
+    isConnected = false;
+    return false;
+  }
+  
+  // Verificar o formato do endereço da carteira
+  if (typeof walletAddress !== 'string' || !walletAddress.match(/^0x[a-fA-F0-9]{40}$/)) {
+    console.warn("Formato de endereço de carteira inválido:", walletAddress);
+    isConnected = false;
+    return false;
+  }
+  
+  // Verificação do estado do provider (especialmente importante para MetaMask)
+  try {
+    if (provider.isConnected && typeof provider.isConnected === 'function') {
+      const providerConnected = provider.isConnected();
+      if (!providerConnected) {
+        console.warn("Provider reporta desconexão");
+        isConnected = false;
+        return false;
+      }
+    }
+    
+    // Verificação adicional para Metamask
+    if (window.ethereum && window.ethereum.selectedAddress) {
+      if (window.ethereum.selectedAddress.toLowerCase() !== walletAddress.toLowerCase()) {
+        console.warn("Endereço selecionado na Metamask não corresponde ao endereço armazenado");
+        walletAddress = window.ethereum.selectedAddress; // Atualizar para o endereço atual
+      }
+    }
+  } catch (e) {
+    console.warn("Erro ao verificar estado de conexão do provider:", e);
+  }
+  
   return isConnected && walletAddress !== null;
 }
 
@@ -458,7 +499,11 @@ function isWalletConnected() {
  * @returns {string|null}
  */
 function getWalletAddress() {
-  return walletAddress;
+  // Verificação adicional para garantir que o endereço é válido
+  if (walletAddress && typeof walletAddress === 'string' && walletAddress.startsWith('0x')) {
+    return walletAddress;
+  }
+  return null;
 }
 
 /**

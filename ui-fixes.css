@@ -1,0 +1,125 @@
+/* ui-fixes.css */
+/* Estilos para garantir que elementos de UI sempre funcionem corretamente */
+
+/* Garantir que botões sejam sempre clicáveis */
+button, 
+[role="button"], 
+a.button, 
+input[type="button"], 
+input[type="submit"],
+.auth-toggle,
+#login-button,
+#logout-button,
+#acessar-arquivo,
+#cadastro-metaverso {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+  user-select: auto !important;
+  -webkit-user-select: auto !important;
+}
+
+/* Quando estiver em modo PDF, aplicar proteções somente ao conteúdo do PDF */
+.pdf-mode .pdf-container * {
+  user-select: none !important;
+  -webkit-user-select: none !important;
+  pointer-events: none !important;
+}
+
+/* Mas manter botões no visualizador de PDF clicáveis */
+.pdf-mode .pdf-container button,
+.pdf-mode .pdf-container [role="button"],
+.pdf-mode .pdf-container .pdf-control {
+  pointer-events: auto !important;
+  cursor: pointer !important;
+}
+
+/* Garantir que o overlay de carregamento fique realmente escondido quando necessário */
+#loading-overlay.hidden {
+  display: none !important;
+  visibility: hidden !important;
+  opacity: 0 !important;
+  pointer-events: none !important;
+}
+
+/* Garantir que contêineres de autenticação fiquem visíveis quando inicializados */
+.auth-container.initialized {
+  opacity: 1 !important;
+  visibility: visible !important;
+  display: block !important;
+}
+
+/* Estilo para notificações personalizadas */
+.custom-notification {
+  position: fixed;
+  top: 20px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 15px 20px;
+  border-radius: 4px;
+  box-shadow: 0 2px 10px rgba(0,0,0,0.2);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  animation: notification-in 0.3s ease-out;
+}
+
+/* Animação para entrada de notificações */
+@keyframes notification-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -20px);
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, 0);
+  }
+}
+
+/* Variantes de notificação */
+.custom-notification.info {
+  background-color: #2196F3;
+  color: white;
+}
+
+.custom-notification.success {
+  background-color: #4CAF50;
+  color: white;
+}
+
+.custom-notification.warning {
+  background-color: #FF9800;
+  color: white;
+}
+
+.custom-notification.error {
+  background-color: #F44336;
+  color: white;
+}
+
+/* Botão de fechar da notificação */
+.custom-notification .close-btn {
+  position: absolute;
+  top: 5px;
+  right: 10px;
+  cursor: pointer;
+  font-weight: bold;
+  opacity: 0.7;
+}
+
+.custom-notification .close-btn:hover {
+  opacity: 1;
+}
+
+/* Modo de recuperação de emergência */
+body.recovery-mode .auth-container,
+body.recovery-mode #login-button {
+  display: block !important;
+  visibility: visible !important;
+  opacity: 1 !important;
+  pointer-events: auto !important;
+}
+
+body.recovery-mode #loading-overlay {
+  display: none !important;
+  visibility: hidden !important;
+}

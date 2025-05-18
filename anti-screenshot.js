@@ -7,19 +7,21 @@ class AntiScreenshotSystem {
     this.captureAttempts = 0;
     this.maxAttempts = 1; // Política mais rigorosa: encerrar na primeira tentativa
     this.blurTimeout = null;
+    this.pdfMode = false; // Controla se estamos no modo de visualização PDF
     
     // Elementos DOM
     this.overlay = null;
     this.watermark = null;
     this.alertBox = null;
     this.pdfViewer = null;
-    
-    // Métodos bind
+      // Métodos bind
     this.handlePrintScreen = this.handlePrintScreen.bind(this);
     this.handleVisibilityChange = this.handleVisibilityChange.bind(this);
     this.handleDevTools = this.handleDevTools.bind(this);
     this.resetCaptureState = this.resetCaptureState.bind(this);
     this.closeAlert = this.closeAlert.bind(this);
+    this.enterPDFMode = this.enterPDFMode.bind(this);
+    this.exitPDFMode = this.exitPDFMode.bind(this);
   }
   
   // Inicializar o sistema
@@ -286,9 +288,27 @@ class AntiScreenshotSystem {
   }
 }
 
+  // Entrar no modo PDF (ativa proteções)
+  enterPDFMode() {
+    this.pdfMode = true;
+    document.body.classList.add('pdf-mode');
+    console.log("Modo de proteção de PDF ativado");
+  }
+  
+  // Sair do modo PDF (desativa proteções)
+  exitPDFMode() {
+    this.pdfMode = false;
+    document.body.classList.remove('pdf-mode');
+    console.log("Modo de proteção de PDF desativado");
+  }
+
 // Inicializar o sistema quando o script for carregado
 const antiScreenshot = new AntiScreenshotSystem();
 window.addEventListener('load', () => antiScreenshot.init());
 
 // Exportar para uso global
 window.antiScreenshot = antiScreenshot;
+
+// Expor métodos para serem chamados por outros módulos
+window.enterPDFMode = antiScreenshot.enterPDFMode;
+window.exitPDFMode = antiScreenshot.exitPDFMode;

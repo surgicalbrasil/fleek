@@ -5,7 +5,7 @@
 
 import { initConfig, getConfig, isDevelopment } from './modules/config.js';
 import { initMagicSDK, loginWithEmail, logout, checkUserLoggedIn } from './modules/auth.js';
-import { initUI, showError, showPdfViewer, getCurrentAuthMethod } from './modules/ui-manager.js';
+import { initUI, showError, showPdfViewer, getCurrentAuthMethod, resetUIToInitialState } from './modules/ui-manager.js';
 import { initPDFViewer, loadEncryptedFile, isDocumentAccessAuthorized } from './modules/pdf-viewer.js';
 import { initWalletConnector, connectWallet, isWalletConnected, getWalletAddress } from './modules/wallet-connector.js';
 import { logAction } from './utils/utils.js';
@@ -17,7 +17,27 @@ let appInitialized = false;
 window.fleekAppState = {
   authMethod: 'email',
   isLoggedIn: false,
-  userIdentifier: null
+  userIdentifier: null,
+  walletAddress: null,
+  
+  // Método para atualizar o estado de forma segura
+  update: function(newState) {
+    Object.assign(this, newState);
+    console.log("Estado global atualizado:", JSON.stringify({
+      authMethod: this.authMethod,
+      isLoggedIn: this.isLoggedIn,
+      hasIdentifier: !!this.userIdentifier
+    }));
+  },
+  
+  // Método para limpar o estado
+  reset: function() {
+    this.authMethod = 'email';
+    this.isLoggedIn = false;
+    this.userIdentifier = null;
+    this.walletAddress = null;
+    console.log("Estado global resetado");
+  }
 };
 
 /**
@@ -34,11 +54,27 @@ async function initApp() {
     // Inicializar UI
     initUI();
     
-    // Inicializar Magic SDK
-    await initMagicSDK();
+    // Inicializar Magic SDK com timeout de proteção
+    try {
+      await Promise.race([
+        initMagicSDK(),
+        new Promise((_, reject) => setTimeout(() => {
+          console.warn("Timeout ao inicializar Magic SDK");
+          reject(new Error("Timeout ao inicializar Magic SDK"));
+        }, 5000))
+      ]);
+    } catch (magicError) {
+      console.error("Falha ao inicializar Magic SDK:", magicError);
+      // Continuamos mesmo com erro, para dar chance ao login por carteira
+    }
     
     // Inicializar conector de carteira
-    await initWalletConnector();
+    try {
+      await initWalletConnector();
+    } catch (walletError) {
+      console.error("Falha ao inicializar conector de carteira:", walletError);
+      // Continuamos mesmo com erro, para dar chance ao login por email
+    }
     
     // Inicializar visualizador de PDF
     initPDFViewer('pdf-viewer');
@@ -47,21 +83,28 @@ async function initApp() {
     setupEventListeners();
     
     // Verificar estado de autenticação
-    await checkInitialAuthState();    appInitialized = true;
+    await checkInitialAuthState();
+    
+    appInitialized = true;
     console.log("Aplicação inicializada com sucesso");
     
     // Marcar UI como inicializada
     const authContainer = document.querySelector('.auth-container');
     if (authContainer) {
       authContainer.classList.add('initialized');
+      authContainer.style.opacity = '1'; // Garantir visibilidade
     }
     
     // Esconder o overlay de carregamento
     hideLoadingOverlay();
     
+    // Adicionar classe ao body indicando inicialização completa
+    document.body.classList.add('app-initialized');
+    
     logAction('app:initialized', {
       isDev: isDevelopment(),
-      debug: getConfig('debugEnabled')
+      debug: getConfig('debugEnabled'),
+      timestamp: new Date().toISOString()
     });
   } catch (error) {
     console.error("Erro ao inicializar a aplicação:", error);
@@ -190,52 +233,73 @@ function setupEventListeners() {
  * Verifica o estado inicial de autenticação após inicializar a aplicação
  * @returns {Promise<void>}
  */
-async function checkInitialAuthState() {
-  try {
+async function checkInitialAuthState() {  try {
     console.log("Verificando estado inicial de autenticação...");
     showLoadingOverlay("Verificando autenticação...");
     
-    // Atrasar um pouco para garantir que a UI esteja estável antes de verificar autenticação
-    // Isso ajuda a evitar o efeito de "piscar" dos botões
-    await new Promise(resolve => setTimeout(resolve, 500));
+    // Importar funções de UI antecipadamente para evitar problemas
+    const { resetUIToInitialState, debugUIState } = await import('./modules/ui-manager.js');
     
-    // Verificar se usuário já está logado com Magic
-    const isLoggedIn = await checkUserLoggedIn();
+    // Criar uma promessa para o timeout
+    const timeoutPromise = new Promise((_, reject) => {
+      setTimeout(() => {
+        console.warn("Timeout de segurança atingido para verificação de autenticação");
+        reject(new Error("Timeout de verificação de autenticação"));
+      }, 5000);
+    });
     
-    // Verificar se uma carteira já está conectada
-    const walletConnected = isWalletConnected();
+    // Verificação de segurança para garantir que o overlay não ficará preso
+    const maxAuthCheckTime = setTimeout(() => {
+      console.warn("Timeout de segurança atingido para verificação de autenticação");
+      hideLoadingOverlay();
+      resetUIToInitialState();
+      document.body.classList.add('auth-checked');
+      document.body.classList.add('auth-timeout');
+    }, 5000); // 5 segundos é um tempo seguro para a verificação
     
-    // Importar a função de debug para verificar o estado da UI
-    const { debugUIState } = await import('./modules/ui-manager.js');
-    
-    if (isLoggedIn || walletConnected) {
-      console.log("Usuário já está autenticado:", { magicLogin: isLoggedIn, walletConnected });
-      // A UI já deve ter sido atualizada pelos eventos disparados por checkUserLoggedIn()
-      // ou pela inicialização do wallet-connector
-    } else {
-      console.log("Usuário não está autenticado");
+    try {
+      // Verificar se usuário já está logado com Magic
+      const isLoggedIn = await checkUserLoggedIn();
       
-      // Forçar resetar a UI para garantir que os botões estejam visíveis
-      const { resetUIToInitialState } = await import('./modules/ui-manager.js');
+      // Verificar se uma carteira já está conectada
+      const walletConnected = isWalletConnected();
+      
+      if (isLoggedIn || walletConnected) {
+        console.log("Usuário já está autenticado:", { magicLogin: isLoggedIn, walletConnected });
+        // Atualizar explicitamente o estado global
+        window.fleekAppState.isLoggedIn = true;
+        window.fleekAppState.authMethod = isLoggedIn ? 'email' : 'wallet';
+      } else {
+        console.log("Usuário não está autenticado");
+        // Redefinir o estado global para garantir consistência
+        window.fleekAppState.isLoggedIn = false;
+        window.fleekAppState.authMethod = 'email';
+        window.fleekAppState.userIdentifier = null;
+        
+        // Forçar resetar a UI para garantir que os botões estejam visíveis
+        resetUIToInitialState();
+      }
+    } catch (innerError) {
+      console.error("Erro durante verificação de autenticação:", innerError);
       resetUIToInitialState();
     }
     
     // Log do estado da UI para debug
     debugUIState();
     
-    // Atrasar um pouco antes de esconder o overlay
-    // para dar tempo aos eventos de UI serem processados
-    await new Promise(resolve => setTimeout(resolve, 300));
-    
-    // Garantir que o overlay seja escondido
+    // Garantir que o overlay seja escondido independentemente do resultado
     hideLoadingOverlay();
     
     // Adicionar uma classe para indicar que a autenticação foi verificada
     document.body.classList.add('auth-checked');
     
-  } catch (error) {
+    // Cancelar o timeout de segurança
+    clearTimeout(maxAuthCheckTime);  } catch (error) {
     console.error("Erro ao verificar estado de autenticação:", error);
     hideLoadingOverlay();
+    // Garantir que a UI seja redefinida em caso de erro
+    resetUIToInitialState();
+    document.body.classList.add('auth-checked');
   }
 }
 
@@ -247,47 +311,101 @@ function hideLoadingOverlay() {
   console.log("Escondendo overlay de carregamento");
   const overlay = document.getElementById('loading-overlay');
   if (overlay) {
-    // Forçar a remoção da classe antes de adicionar a classe hidden
-    overlay.className = 'loading-overlay';
-    overlay.classList.add('hidden');
-    overlay.style.display = 'none'; // Forçar diretamente o estilo display none
-    
-    // Marcar a aplicação como inicializada
-    const authContainer = document.querySelector('.auth-container');
-    if (authContainer) {
-      authContainer.classList.add('initialized');
-      authContainer.style.opacity = '1'; // Garantir visibilidade
-    }
-    
-    // Tentar garantir que a UI esteja visível imediatamente
     try {
-      const loginButton = document.getElementById('login-button');
-      if (loginButton) {
-        loginButton.style.display = 'block';
-        loginButton.style.visibility = 'visible';
-        loginButton.style.opacity = '1';
+      // Forçar a remoção da classe antes de adicionar a classe hidden
+      overlay.className = 'loading-overlay';
+      overlay.classList.add('hidden');
+      overlay.style.display = 'none'; // Forçar diretamente o estilo display none
+      overlay.style.visibility = 'hidden'; // Garantir que também esteja invisível
+      overlay.style.opacity = '0'; // Tornar completamente transparente
+      overlay.style.pointerEvents = 'none'; // Impedir interações
+      
+      // Marcar a aplicação como inicializada
+      const authContainer = document.querySelector('.auth-container');
+      if (authContainer) {
+        authContainer.classList.add('initialized');
+        authContainer.style.opacity = '1'; // Garantir visibilidade
+        authContainer.style.visibility = 'visible'; // Garantir que esteja visível
+        authContainer.style.display = 'block'; // Garantir que esteja exibido
       }
-    } catch (e) {
-      console.error("Erro ao ajustar visibilidade do botão de login:", e);
-    }
-    
-    // Tentar garantir que a UI esteja visível com delay
-    setTimeout(() => {
+      
+      // Resetar UI para estado inicial usando um método resistente a falhas
       try {
-        // Acessar diretamente a função
-        const uiManager = document.createElement('script');
-        uiManager.textContent = `
-          if (typeof resetUIToInitialState === 'function') {
-            resetUIToInitialState();
-          } else if (window.fleekUIManager && typeof window.fleekUIManager.resetUIToInitialState === 'function') {
-            window.fleekUIManager.resetUIToInitialState();
+        // Primeiro, tente usar resetUIToInitialState do namespace fleekUIManager
+        if (window.fleekUIManager && typeof window.fleekUIManager.resetUIToInitialState === 'function') {
+          console.log("Usando resetUIToInitialState de fleekUIManager");
+          window.fleekUIManager.resetUIToInitialState();
+        }
+        // Em seguida, tente a função global
+        else if (typeof resetUIToInitialState === 'function') {
+          console.log("Usando resetUIToInitialState global");
+          resetUIToInitialState();
+        }
+        // Se nenhuma dessas opções funcionar, tente a função importada
+        else if (typeof window.resetUIToInitialState === 'function') {
+          console.log("Usando resetUIToInitialState global (window)");
+          window.resetUIToInitialState();
+        }
+        // Por último, execute um fallback
+        else {
+          throw new Error("resetUIToInitialState não encontrado");
+        }
+      } catch (resetError) {
+        console.warn("resetUIToInitialState falhou:", resetError);
+        console.warn("Executando fallback de restauração da UI");
+        
+        // Fallback completo para garantir que todos os elementos de UI estejam visíveis
+        const elementsToReset = [
+          '#login-button', '.auth-container', '.auth-toggle', 
+          '#logout-button', '#acessar-arquivo', '#cadastro-metaverso', 
+          'button', '[role="button"]', 'a.button', 'input[type="button"]'
+        ];
+        
+        document.querySelectorAll(elementsToReset.join(', ')).forEach(elem => {
+          if (elem) {
+            // Para botões que devem começar visíveis (como login)
+            if (elem.id === 'login-button' || elem.classList.contains('auth-toggle')) {
+              elem.style.display = 'block';
+              elem.style.visibility = 'visible';
+              elem.style.opacity = '1';
+            }
+            // Para elementos que podem começar ocultos dependendo do estado de autenticação
+            else {
+              // Restaurar para o estado natural do elemento
+              elem.style.visibility = 'visible';
+              elem.style.opacity = '1';
+            }
+            
+            // Garantir que sejam clicáveis
+            elem.style.pointerEvents = 'auto';
+            elem.style.cursor = 'pointer';
           }
-        `;
-        document.head.appendChild(uiManager);
-      } catch (e) {
-        console.error("Erro ao garantir visibilidade da UI:", e);
+        });
+        
+        // Dispara um evento personalizado para sinalizar que a UI foi restaurada
+        document.dispatchEvent(new CustomEvent('uiRestored', { detail: { method: 'fallback' } }));
       }
-    }, 100);
+      
+      // Notificar serviços que dependem do carregamento completo
+      document.dispatchEvent(new CustomEvent('appLoaded'));
+    } catch (e) {
+      console.error("Erro ao esconder overlay:", e);
+      // Fallback de emergência - garantir que os elementos essenciais sejam visíveis
+      document.querySelectorAll('#login-button, .auth-container, .auth-toggle').forEach(elem => {
+        if (elem) {
+          elem.style.display = 'block';
+          elem.style.visibility = 'visible';
+          elem.style.opacity = '1';
+          elem.style.pointerEvents = 'auto';
+        }
+      });
+      
+      // Forçar remoção do overlay mesmo em caso de erro
+      overlay.style.display = 'none';
+      overlay.style.visibility = 'hidden';
+      overlay.style.opacity = '0';
+      overlay.style.pointerEvents = 'none';
+    }
   }
 }
 

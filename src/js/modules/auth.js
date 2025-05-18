@@ -200,22 +200,61 @@ async function loginWithEmail(email) {
  */
 async function logout() {
   try {
-    if (!magic || !isLoggedIn) {
-      return true; // Já está deslogado
+    // Mesmo se não estiver logado, vamos limpar o estado
+    const wasLoggedIn = isLoggedIn;
+    
+    // Tentar fazer logout do Magic SDK se estiver disponível - com timeout
+    if (magic) {
+      try {
+        // Adicionando timeout para não travar se o Magic SDK não responder
+        await Promise.race([
+          magic.user.logout(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout ao fazer logout")), 3000))
+        ]);
+      } catch (logoutError) {
+        console.warn("Erro ao fazer logout do Magic SDK:", logoutError);
+        // Continuar mesmo com erro para limpar o estado local
+      }
     }
     
-    await magic.user.logout();
+    // Resetar o estado interno
     isLoggedIn = false;
     userEmail = null;
     userMetadata = null;
     
-    // Evento de logout
-    const logoutEvent = new CustomEvent('auth:logout');
+    // Resetar o estado global da aplicação
+    if (window.fleekAppState) {
+      window.fleekAppState.reset(); // Usar o método reset definido no objeto do estado global
+      console.log("Estado global resetado após logout");
+    }
+    
+    // Evento de logout sempre, independentemente do estado anterior
+    // Isso garante que a UI sempre será atualizada
+    const logoutEvent = new CustomEvent('auth:logout', {
+      detail: { success: true, wasLoggedIn: wasLoggedIn }
+    });
     window.dispatchEvent(logoutEvent);
     
     return true;
   } catch (error) {
     console.error("Erro ao fazer logout:", error);
+    
+    // Mesmo em caso de erro, garantimos a limpeza completa do estado
+    isLoggedIn = false;
+    userEmail = null;
+    userMetadata = null;
+    
+    // Resetar o estado global mesmo em caso de erro
+    if (window.fleekAppState) {
+      window.fleekAppState.reset();
+    }
+    
+    // Disparar evento mesmo em caso de erro, para garantir atualização da UI
+    const logoutEvent = new CustomEvent('auth:logout', {
+      detail: { success: false, error: error.message }
+    });
+    window.dispatchEvent(logoutEvent);
+    
     return false;
   }
 }
@@ -227,14 +266,47 @@ async function logout() {
 async function checkUserLoggedIn() {
   try {
     if (!magic) {
-      await initMagicSDK();
+      try {
+        await Promise.race([
+          initMagicSDK(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("Timeout ao inicializar Magic SDK")), 4000))
+        ]);
+      } catch (initError) {
+        console.error("Erro ou timeout ao inicializar Magic SDK:", initError);
+        return false; // Retornar false diretamente se não puder inicializar o SDK
+      }
     }
-      isLoggedIn = await magic.user.isLoggedIn();
+    
+    if (!magic) {
+      console.error("Magic SDK ainda não está disponível após inicialização");
+      return false;
+    }
+    
+    try {
+      // Verificar login com tratamento de timeout
+      const loginCheckPromise = magic.user.isLoggedIn();
+      
+      // Adicionar timeout de 2.5 segundos para evitar espera infinita (reduzido para maior responsividade)
+      const timeoutPromise = new Promise((_, reject) => {
+        setTimeout(() => reject(new Error("Timeout ao verificar login")), 2500);
+      });
+      
+      isLoggedIn = await Promise.race([loginCheckPromise, timeoutPromise]);
+      console.log("Estado de login verificado:", isLoggedIn);
+    } catch (loginError) {
+      console.warn("Erro ou timeout ao verificar login:", loginError);
+      isLoggedIn = false;
+    }
     
     if (isLoggedIn) {
       // A versão mais recente do Magic SDK usa getUserInfo em vez de getMetadata
       try {
-        userMetadata = await magic.user.getInfo();
+        const metadataPromise = magic.user.getInfo();
+        const timeoutPromise = new Promise((_, reject) => {
+          setTimeout(() => reject(new Error("Timeout ao obter metadados")), 3000);
+        });
+        
+        userMetadata = await Promise.race([metadataPromise, timeoutPromise]);
       } catch (metadataError) {
         // Fallback para API legada se necessário
         console.warn("Erro ao usar getInfo, tentando método alternativo:", metadataError);

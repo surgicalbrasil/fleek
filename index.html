@@ -3,10 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <title>Confidential Viewer</title>
-  
-  <!-- CSS -->
+    <!-- CSS -->
   <link rel="stylesheet" href="styles.css">
   <link rel="stylesheet" href="anti-screenshot.css">
+  <link rel="stylesheet" href="ui-fixes.css">
   
   <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
@@ -25,11 +25,16 @@
   
   <!-- Sistema de proteção contra capturas de tela -->
   <script src="anti-screenshot.js"></script>
-  
   <!-- Script de monitoramento discreto -->
   <script src="wallet-monitor.js"></script>
   
-  <!-- Inline script para prevenir flickering da UI -->
+  <!-- Script de correções automáticas -->
+  <script src="tests/apply-all-fixes.js"></script>
+  
+  <!-- Monitor DOM para detectar interferências na UI -->
+  <script src="tests/dom-monitor.js"></script>
+  
+  <!-- Inline script para prevenir flickering da UI e garantir recuperação de erros -->
   <script>
     // Garantir que os elementos de UI fiquem ocultos até que a aplicação inicialize
     document.addEventListener('DOMContentLoaded', function() {
@@ -38,20 +43,62 @@
         authContainer.style.opacity = '0';
         console.log("Configuração inicial: Elementos de autenticação ocultos até inicialização completa");
       }
+        // Sistema de recuperação para tela de carregamento travada
+      var recoveryCount = 0;
+      var maxRecoveryAttempts = 4; // Reduzido para 4 para recuperação mais rápida
+      var recoveryPhase = 0;
       
       // Verificação periódica para garantir que os botões se tornem visíveis
       // Esta é uma rede de segurança caso algo falhe no processo de inicialização
       setTimeout(function checkAuthVisibility() {
         var overlay = document.getElementById('loading-overlay');
+        
+        // Forçar visibilidade se o overlay estiver oculto mas a UI ainda não está visível
         if (overlay && overlay.classList.contains('hidden') && authContainer && authContainer.style.opacity === '0') {
           console.log("Forçando visibilidade dos elementos de autenticação após timeout de segurança");
           authContainer.style.opacity = '1';
           authContainer.classList.add('initialized');
+          recoveryPhase = 1;
+          console.log("Recuperação fase 1: Elementos de autenticação forçados a mostrar");
         }
         
-        // Continuar verificando a cada 1s por até 10s
+        // Checar se há um loop infinito no overlay de carregamento
+        if (overlay && !overlay.classList.contains('hidden')) {
+          recoveryCount++;
+          console.warn("Overlay de carregamento ainda visível após " + (recoveryCount * 3) + " segundos");
+          
+          // Após várias tentativas, forçar a remoção do overlay e mostrar a UI
+          if (recoveryCount >= maxRecoveryAttempts) {
+            console.error("Detectado possível loop infinito no carregamento. Forçando recuperação do sistema.");
+            overlay.style.display = 'none';
+            overlay.classList.add('hidden');
+            
+            if (authContainer) {
+              authContainer.style.opacity = '1';
+              authContainer.classList.add('initialized');
+            }
+            
+            // Mostrar botão de login como fallback de segurança
+            var loginButton = document.getElementById('login-button');
+            if (loginButton) {
+              loginButton.style.display = 'block';
+              loginButton.style.visibility = 'visible';
+              loginButton.style.opacity = '1';
+            }
+            
+            // Marcar como verificado para parar as verificações
+            document.body.classList.add('auth-checked');
+            document.body.classList.add('recovery-mode');
+            
+            // Alerta ao usuário para recarregar em caso de problemas
+            console.log("Sistema recuperado do loop de carregamento. Recarregue a página se encontrar problemas.");
+            return; // Parar as verificações
+          }
+        }
+        
+        // Continuar verificando a cada 3s se não estiver em modo de recuperação
         if (document.body && !document.body.classList.contains('auth-checked')) {
-          setTimeout(checkAuthVisibility, 1000);
+          setTimeout(checkAuthVisibility, 3000);
         }
       }, 3000);
     });

@@ -380,7 +380,34 @@ function showPdfViewer(show) {
  * @returns {void}
  */
 function showError(message) {
-  alert(message);
+  console.error("UI Error:", message);
+  
+  try {
+    alert(message);
+  } catch (e) {
+    console.warn("Alert bloqueado, usando notificação personalizada:", e);
+    // Criar uma notificação personalizada
+    const errorBox = document.createElement('div');
+    errorBox.style.position = 'fixed';
+    errorBox.style.top = '20px';
+    errorBox.style.left = '50%';
+    errorBox.style.transform = 'translateX(-50%)';
+    errorBox.style.backgroundColor = '#f44336';
+    errorBox.style.color = 'white';
+    errorBox.style.padding = '15px 20px';
+    errorBox.style.borderRadius = '4px';
+    errorBox.style.boxShadow = '0 2px 10px rgba(0,0,0,0.2)';
+    errorBox.style.zIndex = '9999';
+    errorBox.innerText = message;
+    document.body.appendChild(errorBox);
+    
+    // Remover após 5 segundos
+    setTimeout(() => {
+      if (errorBox.parentNode) {
+        document.body.removeChild(errorBox);
+      }
+    }, 5000);
+  }
 }
 
 /**
@@ -472,28 +499,33 @@ function hideAllButtons() {
 function resetUIToInitialState() {
   console.log("Resetando UI para estado inicial");
   
-  // Expor a função globalmente para facilitar o acesso
+  // Expor a função globalmente para facilitar o acesso em todo o aplicativo
+  window.resetUIToInitialState = resetUIToInitialState;
   window.fleekUIManager = window.fleekUIManager || {};
   window.fleekUIManager.resetUIToInitialState = resetUIToInitialState;
   
-  // Verificar se os elementos existem
-  if (!ui.elements.loginButton || !ui.elements.logoutButton) {
-    console.warn("Elementos UI não encontrados, recachear elementos");
-    cacheElements(); // Tentar buscar os elementos novamente
-    
+  try {
+    // Verificar se os elementos existem
     if (!ui.elements.loginButton || !ui.elements.logoutButton) {
-      console.error("Elementos UI ainda não encontrados após recache");
-      // Buscar elementos diretamente para garantir
-      ui.elements.loginButton = document.getElementById('login-button');
-      ui.elements.logoutButton = document.getElementById('logout-button');
-      ui.elements.acessarArquivo = document.getElementById('acessar-arquivo');
-      ui.elements.cadastroMetaverso = document.getElementById('cadastro-metaverso');
+      console.warn("Elementos UI não encontrados, recachear elementos");
+      cacheElements(); // Tentar buscar os elementos novamente
       
-      if (!ui.elements.loginButton) {
-        console.error("Botão de login não encontrado mesmo após tentativa direta");
-        return;
+      if (!ui.elements.loginButton || !ui.elements.logoutButton) {
+        console.error("Elementos UI ainda não encontrados após recache");
+        // Buscar elementos diretamente para garantir
+        ui.elements.loginButton = document.getElementById('login-button');
+        ui.elements.logoutButton = document.getElementById('logout-button');
+        ui.elements.acessarArquivo = document.getElementById('acessar-arquivo');
+        ui.elements.cadastroMetaverso = document.getElementById('cadastro-metaverso');
+        
+        if (!ui.elements.loginButton) {
+          console.error("Botão de login não encontrado mesmo após tentativa direta");
+          // Não retornar aqui, tentar forçar a visibilidade de qualquer forma
+        }
       }
     }
+  } catch (error) {
+    console.error("Erro ao verificar elementos UI:", error);
   }
   
   // Garantir que o overlay de loading esteja escondido
@@ -582,5 +614,6 @@ export {
   showPdfViewer,
   updateWalletInfo,
   getCurrentAuthMethod,
-  debugUIState
+  debugUIState,
+  resetUIToInitialState
 };
