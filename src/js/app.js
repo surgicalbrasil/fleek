@@ -40,10 +40,17 @@ async function initApp() {
     setupEventListeners();
     
     // Verificar estado de autenticação
-    await checkInitialAuthState();
-    
-    appInitialized = true;
+    await checkInitialAuthState();    appInitialized = true;
     console.log("Aplicação inicializada com sucesso");
+    
+    // Marcar UI como inicializada
+    const authContainer = document.querySelector('.auth-container');
+    if (authContainer) {
+      authContainer.classList.add('initialized');
+    }
+    
+    // Esconder o overlay de carregamento
+    hideLoadingOverlay();
     
     logAction('app:initialized', {
       isDev: isDevelopment(),
@@ -170,6 +177,11 @@ function setupEventListeners() {
 async function checkInitialAuthState() {
   try {
     console.log("Verificando estado inicial de autenticação...");
+    showLoadingOverlay("Verificando autenticação...");
+    
+    // Atrasar um pouco para garantir que a UI esteja estável antes de verificar autenticação
+    // Isso ajuda a evitar o efeito de "piscar" dos botões
+    await new Promise(resolve => setTimeout(resolve, 500));
     
     // Verificar se usuário já está logado com Magic
     const isLoggedIn = await checkUserLoggedIn();
@@ -177,20 +189,120 @@ async function checkInitialAuthState() {
     // Verificar se uma carteira já está conectada
     const walletConnected = isWalletConnected();
     
+    // Importar a função de debug para verificar o estado da UI
+    const { debugUIState } = await import('./modules/ui-manager.js');
+    
     if (isLoggedIn || walletConnected) {
       console.log("Usuário já está autenticado:", { magicLogin: isLoggedIn, walletConnected });
       // A UI já deve ter sido atualizada pelos eventos disparados por checkUserLoggedIn()
       // ou pela inicialização do wallet-connector
     } else {
       console.log("Usuário não está autenticado");
+      
+      // Forçar resetar a UI para garantir que os botões estejam visíveis
+      const { resetUIToInitialState } = await import('./modules/ui-manager.js');
+      resetUIToInitialState();
     }
+    
+    // Log do estado da UI para debug
+    debugUIState();
+    
+    // Atrasar um pouco antes de esconder o overlay
+    // para dar tempo aos eventos de UI serem processados
+    await new Promise(resolve => setTimeout(resolve, 300));
+    
+    // Garantir que o overlay seja escondido
+    hideLoadingOverlay();
+    
+    // Adicionar uma classe para indicar que a autenticação foi verificada
+    document.body.classList.add('auth-checked');
+    
   } catch (error) {
     console.error("Erro ao verificar estado de autenticação:", error);
+    hideLoadingOverlay();
+  }
+}
+
+/**
+ * Esconde o overlay de carregamento
+ * @returns {void}
+ */
+function hideLoadingOverlay() {
+  console.log("Escondendo overlay de carregamento");
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) {
+    overlay.classList.add('hidden');
+    
+    // Marcar a aplicação como inicializada
+    const authContainer = document.querySelector('.auth-container');
+    if (authContainer) {
+      authContainer.classList.add('initialized');
+    }
+    
+    // Tentar garantir que a UI esteja visível
+    setTimeout(async () => {
+      try {
+        const { resetUIToInitialState } = await import('./modules/ui-manager.js');
+        resetUIToInitialState();
+      } catch (e) {
+        console.error("Erro ao garantir visibilidade da UI:", e);
+      }
+    }, 100);
+  }
+}
+
+/**
+ * Mostra o overlay de carregamento
+ * @param {string} message - Mensagem opcional a ser mostrada
+ * @returns {void}
+ */
+function showLoadingOverlay(message) {
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) {
+    const textElement = overlay.querySelector('.loading-text');
+    if (textElement && message) {
+      textElement.textContent = message;
+    }
+    overlay.classList.remove('hidden');
   }
 }
 
 // Inicializar aplicação quando o DOM estiver carregado
-document.addEventListener('DOMContentLoaded', initApp);
+document.addEventListener('DOMContentLoaded', () => {
+  console.log("DOM carregado, inicializando aplicação...");
+  // Mostrar overlay de carregamento imediatamente
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) {
+    overlay.classList.remove('hidden');
+  }
+  
+  // Iniciar a aplicação
+  initApp()
+    .then(() => {
+      // Verificação de segurança para garantir que a UI esteja visível
+      setTimeout(async () => {
+        try {
+          console.log("Verificação de segurança do estado da UI");
+          const loginButton = document.getElementById('login-button');
+          const logoutButton = document.getElementById('logout-button');
+          
+          // Verificar se os botões estão em estados inconsistentes
+          if (loginButton && logoutButton) {
+            const loginHidden = loginButton.style.display === 'none' || loginButton.style.opacity === '0';
+            const logoutHidden = logoutButton.style.display === 'none' || logoutButton.style.opacity === '0';
+            
+            if (loginHidden && logoutHidden) {
+              console.warn("Detectado estado inconsistente da UI - ambos os botões estão ocultos");
+              const { resetUIToInitialState } = await import('./modules/ui-manager.js');
+              resetUIToInitialState();
+            }
+          }
+        } catch (e) {
+          console.error("Erro na verificação de segurança da UI:", e);
+        }
+      }, 1500);
+    });
+});
 
 // Exportar funções do módulo
 export {

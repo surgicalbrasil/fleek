@@ -16,14 +16,37 @@ const ui = {
  * @returns {void}
  */
 function initUI() {
+  console.log("Inicializando UI Manager");
+  
   // Armazenar referências aos elementos da UI
   cacheElements();
   
-  // Configurar estado inicial dos botões
-  ui.elements.loginButton.style.display = 'block';
-  ui.elements.logoutButton.style.display = 'none';
-  ui.elements.acessarArquivo.style.display = 'none';
-  ui.elements.cadastroMetaverso.style.display = 'none';
+  // Verificar se os elementos essenciais foram encontrados
+  if (!ui.elements.loginButton || !ui.elements.logoutButton) {
+    console.error("Elementos essenciais da UI não foram encontrados!");
+    // Tentaremos novamente após um curto atraso
+    setTimeout(() => {
+      console.log("Tentando reinicializar UI após delay");
+      cacheElements();
+      completeInitialization();
+    }, 100);
+    return;
+  }
+  
+  // Continuar com a inicialização normal
+  completeInitialization();
+}
+
+/**
+ * Completa a inicialização da UI após garantir que elementos existam
+ * @returns {void}
+ */
+function completeInitialization() {
+  // Esconder todos os botões inicialmente para evitar flickering
+  hideAllButtons();
+  
+  // Configurar estado inicial dos botões (ficarão escondidos até a aplicação inicializar)
+  resetUIToInitialState();
   
   // Configurar botões de alternância de autenticação
   setupAuthToggle();
@@ -46,7 +69,8 @@ function initUI() {
   // Configurar listeners para visualizador de PDF
   setupPdfViewerListeners();
   
-  console.log("UI Manager inicializado");
+  console.log("UI Manager inicializado completamente");
+  debugUIState();
 }
 
 /**
@@ -266,21 +290,16 @@ function updateUIAfterLogin(detail) {
     }
   }
   
-  // Definir método correto
-  ui.currentAuthMethod = method;
-    // Atualizar estado dos botões imediatamente
-  ui.elements.loginButton.style.display = 'none';
-  ui.elements.logoutButton.style.display = 'block';
-  ui.elements.acessarArquivo.style.display = 'block';
-  ui.elements.cadastroMetaverso.style.display = 'block';
-  
-  // Registrar estado da UI para depuração
-  debugUIState();
+  // Utilizar nossa função para definir o estado autenticado
+  setAuthenticatedState(method);
   
   // Desativar toggles de autenticação
   ui.elements.authToggles.forEach(toggle => {
     toggle.disabled = true;
   });
+  
+  // Registrar estado da UI para depuração
+  debugUIState();
 }
 
 /**
@@ -296,11 +315,9 @@ function updateUIAfterLogout() {
   // Ocultar informações da carteira
   ui.elements.walletInfo.style.display = 'none';
   ui.elements.walletAddress.textContent = '';
-    // Resetar botões
-  ui.elements.loginButton.style.display = 'block';
-  ui.elements.loginButton.textContent = 'Fazer Login';
-  ui.elements.logoutButton.style.display = 'none';
-  ui.elements.acessarArquivo.style.display = 'none';
+  
+  // Resetar estado da UI para o estado inicial
+  resetUIToInitialState();
   
   // Registrar estado da UI para depuração
   debugUIState();
@@ -414,6 +431,119 @@ function debugUIState() {
     acessarArquivo: ui.elements.acessarArquivo?.style.display,
     cadastroMetaverso: ui.elements.cadastroMetaverso?.style.display
   });
+}
+
+/**
+ * Oculta todos os botões para evitar flickering durante a inicialização
+ * @returns {void}
+ */
+function hideAllButtons() {
+  console.log("Ocultando botões temporariamente");
+  
+  if (!ui.elements.loginButton || !ui.elements.logoutButton) {
+    console.warn("Elementos UI não encontrados durante hideAllButtons");
+    return;
+  }
+  
+  // Em vez de apenas ocultar, definimos a opacidade para 0
+  // Isso mantém o layout intacto, mas torna os botões invisíveis
+  // Importante: não mudamos as propriedades display ou visibility
+  ui.elements.loginButton.style.opacity = '0';
+  ui.elements.logoutButton.style.opacity = '0';
+  ui.elements.acessarArquivo.style.opacity = '0';
+  ui.elements.cadastroMetaverso.style.opacity = '0';
+  
+  // Garantir que os botões serão reexibidos após um tempo, como fallback de segurança
+  setTimeout(() => {
+    console.log("Garantindo visibilidade dos botões (timeout de segurança)");
+    resetUIToInitialState();
+  }, 2000);
+}
+
+/**
+ * Redefine a UI para o estado inicial não autenticado
+ * @returns {void}
+ */
+function resetUIToInitialState() {
+  console.log("Resetando UI para estado inicial");
+  
+  // Verificar se os elementos existem
+  if (!ui.elements.loginButton || !ui.elements.logoutButton) {
+    console.warn("Elementos UI não encontrados, recachear elementos");
+    cacheElements(); // Tentar buscar os elementos novamente
+    
+    if (!ui.elements.loginButton || !ui.elements.logoutButton) {
+      console.error("Elementos UI ainda não encontrados após recache");
+      return;
+    }
+  }
+  
+  // Definir estado padrão dos elementos
+  ui.elements.loginButton.style.display = 'block';
+  ui.elements.loginButton.style.opacity = '1';
+  ui.elements.loginButton.style.visibility = 'visible';
+  
+  ui.elements.logoutButton.style.display = 'none';
+  ui.elements.logoutButton.style.opacity = '1';
+  
+  ui.elements.acessarArquivo.style.display = 'none';
+  ui.elements.acessarArquivo.style.opacity = '1';
+  
+  ui.elements.cadastroMetaverso.style.display = 'none';
+  ui.elements.cadastroMetaverso.style.opacity = '1';
+  
+  // Garantir que o formulário de e-mail esteja visível se for o método atual
+  if (ui.currentAuthMethod === 'email') {
+    ui.elements.emailForm.style.display = 'block';
+    ui.elements.loginButton.textContent = 'Fazer Login';
+  } else if (ui.currentAuthMethod === 'wallet') {
+    ui.elements.emailForm.style.display = 'none';
+    ui.elements.loginButton.textContent = 'Conectar Carteira';
+  }
+  
+  // Log do estado final
+  debugUIState();
+}
+
+/**
+ * Define o estado da UI para usuário autenticado
+ * @param {string} method - Método de autenticação ('email' ou 'wallet')
+ * @returns {void}
+ */
+function setAuthenticatedState(method) {
+  console.log(`Configurando estado autenticado para método: ${method}`);
+  
+  if (!ui.elements.loginButton || !ui.elements.logoutButton) {
+    console.warn("Elementos UI não encontrados, recachear elementos");
+    cacheElements(); // Tentar buscar os elementos novamente
+    
+    if (!ui.elements.loginButton || !ui.elements.logoutButton) {
+      console.error("Elementos UI ainda não encontrados após recache");
+      return;
+    }
+  }
+  
+  ui.currentAuthMethod = method;
+  
+  // Garantir que os elementos tenham seus estilos definidos corretamente
+  ui.elements.loginButton.style.display = 'none';
+  ui.elements.loginButton.style.visibility = 'visible';
+  ui.elements.loginButton.style.opacity = '1';
+  
+  ui.elements.logoutButton.style.display = 'block';
+  ui.elements.logoutButton.style.visibility = 'visible';
+  ui.elements.logoutButton.style.opacity = '1';
+  
+  ui.elements.acessarArquivo.style.display = 'block';
+  ui.elements.acessarArquivo.style.visibility = 'visible';
+  ui.elements.acessarArquivo.style.opacity = '1';
+  
+  ui.elements.cadastroMetaverso.style.display = 'block';
+  ui.elements.cadastroMetaverso.style.visibility = 'visible';
+  ui.elements.cadastroMetaverso.style.opacity = '1';
+  
+  // Registrar estado da UI para depuração
+  debugUIState();
 }
 
 // Exportar funções do módulo

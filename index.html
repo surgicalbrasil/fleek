@@ -29,8 +29,33 @@
   <!-- Script de monitoramento discreto -->
   <script src="wallet-monitor.js"></script>
   
-  <!-- Scripts de testes (descomente para executar testes) -->
-  <script src="tests/automated-tests.js"></script>
+  <!-- Inline script para prevenir flickering da UI -->
+  <script>
+    // Garantir que os elementos de UI fiquem ocultos até que a aplicação inicialize
+    document.addEventListener('DOMContentLoaded', function() {
+      var authContainer = document.querySelector('.auth-container');
+      if (authContainer) {
+        authContainer.style.opacity = '0';
+        console.log("Configuração inicial: Elementos de autenticação ocultos até inicialização completa");
+      }
+      
+      // Verificação periódica para garantir que os botões se tornem visíveis
+      // Esta é uma rede de segurança caso algo falhe no processo de inicialização
+      setTimeout(function checkAuthVisibility() {
+        var overlay = document.getElementById('loading-overlay');
+        if (overlay && overlay.classList.contains('hidden') && authContainer && authContainer.style.opacity === '0') {
+          console.log("Forçando visibilidade dos elementos de autenticação após timeout de segurança");
+          authContainer.style.opacity = '1';
+          authContainer.classList.add('initialized');
+        }
+        
+        // Continuar verificando a cada 1s por até 10s
+        if (document.body && !document.body.classList.contains('auth-checked')) {
+          setTimeout(checkAuthVisibility, 1000);
+        }
+      }, 3000);
+    });
+  </script>
   
   <!-- Script principal (usando ES modules) -->
   <script type="module" src="src/js/app.js"></script>
@@ -38,6 +63,12 @@
 <body>
   <!-- Cabeçalho -->
   <header id="header">
+    <!-- Loading overlay -->
+    <div id="loading-overlay" class="loading-overlay">
+      <div class="loading-spinner"></div>
+      <div class="loading-text">Carregando...</div>
+    </div>
+    
     <div class="auth-container">
       <div class="auth-options">
         <button class="auth-toggle active" data-auth="email">
