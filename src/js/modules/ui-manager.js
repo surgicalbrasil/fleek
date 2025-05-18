@@ -83,6 +83,9 @@ function setupAuthToggle() {
       // Mostrar/esconder formulário de email conforme o método
       ui.elements.emailForm.style.display = ui.currentAuthMethod === 'email' ? 'block' : 'none';
       
+      // Mostrar/esconder informações da carteira
+      ui.elements.walletInfo.style.display = ui.currentAuthMethod === 'wallet' ? 'flex' : 'none';
+      
       // Atualizar o texto do botão de login conforme o método
       if (ui.currentAuthMethod === 'email') {
         ui.elements.loginButton.textContent = 'Fazer Login';
@@ -236,12 +239,24 @@ function setupPdfViewerListeners() {
  */
 function updateUIAfterLogin(detail) {
   // Atualizar UI baseado no método de login
-  if (detail.method === 'email') {
+  const method = detail.method || 'email';
+  
+  if (method === 'email') {
     ui.elements.emailForm.style.display = 'none';
     ui.elements.userEmail.disabled = true;
-  } else if (detail.method === 'wallet') {
-    ui.elements.walletInfo.style.display = 'block';
+    ui.elements.walletInfo.style.display = 'none';
+  } else if (method === 'wallet') {
+    ui.elements.emailForm.style.display = 'none';
+    ui.elements.walletInfo.style.display = 'flex';
+    
+    // Atualizar endereço da carteira se disponível
+    if (detail.user && detail.user.publicAddress) {
+      updateWalletInfo(detail.user.publicAddress, '');
+    }
   }
+  
+  // Definir método correto
+  ui.currentAuthMethod = method;
   
   // Mostrar botões pós-login
   ui.elements.loginButton.style.display = 'none';
@@ -337,6 +352,37 @@ function showError(message) {
  */
 function getCurrentAuthMethod() {
   return ui.currentAuthMethod;
+}
+
+/**
+ * Atualiza a exibição da UI com base no método de autenticação
+ * @param {string} method - Método de autenticação ('email' ou 'wallet')
+ * @returns {void}
+ */
+function updateAuthDisplay(method) {
+  // Atualizar os botões de alternância
+  ui.elements.authToggles.forEach(btn => {
+    if (btn.dataset.auth === method) {
+      btn.classList.add('active');
+    } else {
+      btn.classList.remove('active');
+    }
+  });
+  
+  // Atualizar campos visíveis
+  ui.currentAuthMethod = method;
+  ui.elements.emailForm.style.display = method === 'email' ? 'block' : 'none';
+  ui.elements.walletInfo.style.display = method === 'wallet' ? 'flex' : 'none';
+  
+  // Atualizar texto do botão de acordo com o estado
+  const isLoggedIn = ui.elements.loginButton.style.display === 'none';
+  if (!isLoggedIn) {
+    if (method === 'email') {
+      ui.elements.loginButton.textContent = 'Fazer Login';
+    } else if (method === 'wallet') {
+      ui.elements.loginButton.textContent = 'Conectar Carteira';
+    }
+  }
 }
 
 // Exportar funções do módulo

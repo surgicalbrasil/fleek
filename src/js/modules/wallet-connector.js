@@ -40,13 +40,23 @@ async function initWalletConnector() {
       throw new Error("Provedor Web3 não encontrado");
     }
     
-    // Criar instância Web3
+    // Criar instância Web3 com tratamento adequado para diferentes ambientes
     if (typeof Web3 !== 'undefined') {
       web3Instance = new Web3(provider);
     } else if (typeof web3 !== 'undefined') {
       web3Instance = new web3.constructor(provider);
     } else if (window.ethereum) {
-      web3Instance = { eth: window.ethereum };
+      // Abordagem mais moderna com ethereum diretamente
+      web3Instance = {
+        eth: {
+          getAccounts: async () => {
+            return window.ethereum.request({ method: 'eth_accounts' });
+          },
+          request: async (params) => {
+            return window.ethereum.request(params);
+          }
+        }
+      };
     } else {
       throw new Error("Web3 não está disponível");
     }
@@ -154,23 +164,57 @@ async function connectWallet() {
   try {
     if (!provider) {
       await initWalletConnector();
+      if (!provider) {
+        throw new Error("Não foi possível inicializar o provedor Web3");
+      }
     }
     
-    // Requisitar acesso à conta
-    let accounts;
-    if (provider.request) {
-      // Método EIP-1193
-      accounts = await provider.request({ method: 'eth_requestAccounts' });
-    } else if (web3Instance.eth.requestAccounts) {
-      // Web3 1.0
-      accounts = await web3Instance.eth.requestAccounts();
-    } else {
-      // Fallback legado
-      accounts = await getAccounts();
+    // Requisitar acesso à conta com tratamento para diferentes APIs
+    let accounts = [];
+    const methods = [
+      // Método 1: API EIP-1193 (padrão moderno)
+      async () => {
+        if (provider.request) {
+          return provider.request({ method: 'eth_requestAccounts' });
+        }
+        throw new Error("Método não suportado");
+      },
+      // Método 2: Web3 1.0
+      async () => {
+        if (web3Instance.eth.requestAccounts) {
+          return web3Instance.eth.requestAccounts();
+        }
+        throw new Error("Método não suportado");
+      },
+      // Método 3: Fallback para enable
+      async () => {
+        if (provider.enable) {
+          return provider.enable();
+        }
+        throw new Error("Método não suportado");
+      },
+      // Método 4: Último recurso - apenas verificar contas existentes
+      async () => {
+        const accounts = await getAccounts();
+        if (accounts && accounts.length > 0) return accounts;
+        throw new Error("Não foi possível solicitar acesso à carteira");
+      }
+    ];
+    
+    // Tentar cada método até um funcionar
+    let lastError = null;
+    for (const method of methods) {
+      try {
+        accounts = await method();
+        if (accounts && accounts.length > 0) break;
+      } catch (error) {
+        lastError = error;
+        console.warn("Tentativa de conexão falhou:", error.message);
+      }
     }
     
     if (!accounts || accounts.length === 0) {
-      throw new Error("Nenhuma conta autorizada");
+      throw lastError || new Error("Nenhuma conta autorizada");
     }
     
     walletAddress = accounts[0];
@@ -349,6 +393,7 @@ async function checkWalletAuthorization(address) {
  * @returns {void}
  */
 function dispatchConnectedEvent() {
+  // Evento de carteira conectada
   const connectedEvent = new CustomEvent('wallet:connected', {
     detail: {
       address: walletAddress,
@@ -357,6 +402,19 @@ function dispatchConnectedEvent() {
     }
   });
   window.dispatchEvent(connectedEvent);
+  
+  // Também disparar evento de autenticação para integrar com o fluxo de autenticação geral
+  const authEvent = new CustomEvent('auth:login', {
+    detail: {
+      method: 'wallet',
+      user: {
+        publicAddress: walletAddress,
+        balance: walletBalance,
+        chainId: walletChainId
+      }
+    }
+  });
+  window.dispatchEvent(authEvent);
 }
 
 /**

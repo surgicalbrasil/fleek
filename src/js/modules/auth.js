@@ -31,12 +31,14 @@ async function initMagicSDK() {
       magicPubKey = "pk_live_20134EF9B8F26232"; // Usando a chave do .env ou .env.example
     }
     
+    // Verificar se a biblioteca Magic está carregada
+    if (typeof Magic === 'undefined') {
+      console.error("A biblioteca Magic SDK não foi carregada corretamente");
+      throw new Error("Magic SDK não disponível");
+    }
+    
     if (!magicPubKey) {
-      console.error("Chave Magic SDK não encontrada. Verificando se a biblioteca está carregada...");
-      if (typeof Magic === 'undefined') {
-        console.error("A biblioteca Magic SDK não foi carregada corretamente");
-        throw new Error("Magic SDK não disponível");
-      }
+      console.error("Chave Magic SDK não encontrada");
       throw new Error("Magic SDK Public Key não disponível");
     }
     
@@ -126,22 +128,34 @@ async function loginWithEmail(email) {
       throw new Error("Email não autorizado");
     }
     
-    const didToken = await magic.auth.loginWithMagicLink({ email });
+    // Tentar login com diferentes métodos disponíveis
+    let didToken;
+    try {
+      didToken = await magic.auth.loginWithMagicLink({ email });
+    } catch (err) {
+      console.warn("loginWithMagicLink falhou, tentando método alternativo:", err);
+      if (magic.auth.loginWithEmailOTP) {
+        didToken = await magic.auth.loginWithEmailOTP({ email });
+      } else {
+        throw err;
+      }
+    }
+    
     if (!didToken) {
       throw new Error("Falha ao gerar token de autenticação");
     }
     
-    userEmail = email;    // A versão mais recente do Magic SDK usa getUserInfo em vez de getMetadata
+    userEmail = email;
+    
+    // Obter metadados com tratamento para diferentes versões da API
     try {
       userMetadata = await magic.user.getInfo();
     } catch (metadataError) {
-      // Fallback para API legada se necessário
-      console.warn("Erro ao usar getInfo, tentando método alternativo:", metadataError);
+      console.warn("getInfo falhou, tentando getMetadata:", metadataError);
       try {
         userMetadata = await magic.user.getMetadata();
       } catch (fallbackError) {
         console.error("Não foi possível obter os metadados do usuário:", fallbackError);
-        // Criar metadados mínimos
         userMetadata = { email };
       }
     }
@@ -154,7 +168,8 @@ async function loginWithEmail(email) {
     });
     window.dispatchEvent(loginEvent);
     
-    return true;  } catch (error) {
+    return true;
+  } catch (error) {
     console.error("Erro ao fazer login com email:", error);
     
     // Fornecer mensagens de erro mais específicas para facilitar a depuração
