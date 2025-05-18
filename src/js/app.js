@@ -104,25 +104,29 @@ function setupEventListeners() {
       showError(`Erro no logout: ${error.message}`);
     }
   });
-  
-  // Evento de solicitação de acesso a arquivo
+    // Evento de solicitação de acesso a arquivo
   window.addEventListener('ui:requestFileAccess', async () => {
     try {
-      // Verificar se está logado
-      const isLoggedIn = await checkUserLoggedIn();
+      // Mostrar overlay de carregamento
+      showLoadingOverlay("Acessando documento...");
       
-      if (!isLoggedIn && !isWalletConnected()) {
+      // Verificar se está logado usando o estado global
+      const isLoggedIn = window.fleekAppState && window.fleekAppState.isLoggedIn;
+      const isWalletConnected = window.fleekAppState && window.fleekAppState.authMethod === 'wallet' && window.fleekAppState.walletAddress;
+      
+      if (!isLoggedIn && !isWalletConnected) {
         throw new Error("Você precisa estar logado para acessar documentos");
       }
-        // Obter identificador do usuário (email ou carteira)
+      
+      // Obter identificador do usuário diretamente do estado global
       let userIdentifier = '';
-      if (getCurrentAuthMethod() === 'email') {
-        const authEvent = new CustomEvent('auth:getUserEmail', {
-          detail: { callback: (email) => userIdentifier = email }
-        });
-        window.dispatchEvent(authEvent);
-      } else {
-        userIdentifier = getWalletAddress();
+      if (window.fleekAppState && window.fleekAppState.userIdentifier) {
+        userIdentifier = window.fleekAppState.userIdentifier;
+      } else if (window.fleekAppState && window.fleekAppState.authMethod === 'email') {
+        // Fallback para obter o email se não estiver no estado global
+        userIdentifier = document.getElementById('user-email') ? document.getElementById('user-email').value : '';
+      } else if (window.fleekAppState && window.fleekAppState.authMethod === 'wallet' && window.fleekAppState.walletAddress) {
+        userIdentifier = window.fleekAppState.walletAddress;
       }
       
       if (!userIdentifier) {
@@ -243,19 +247,43 @@ function hideLoadingOverlay() {
   console.log("Escondendo overlay de carregamento");
   const overlay = document.getElementById('loading-overlay');
   if (overlay) {
+    // Forçar a remoção da classe antes de adicionar a classe hidden
+    overlay.className = 'loading-overlay';
     overlay.classList.add('hidden');
+    overlay.style.display = 'none'; // Forçar diretamente o estilo display none
     
     // Marcar a aplicação como inicializada
     const authContainer = document.querySelector('.auth-container');
     if (authContainer) {
       authContainer.classList.add('initialized');
+      authContainer.style.opacity = '1'; // Garantir visibilidade
     }
     
-    // Tentar garantir que a UI esteja visível
-    setTimeout(async () => {
+    // Tentar garantir que a UI esteja visível imediatamente
+    try {
+      const loginButton = document.getElementById('login-button');
+      if (loginButton) {
+        loginButton.style.display = 'block';
+        loginButton.style.visibility = 'visible';
+        loginButton.style.opacity = '1';
+      }
+    } catch (e) {
+      console.error("Erro ao ajustar visibilidade do botão de login:", e);
+    }
+    
+    // Tentar garantir que a UI esteja visível com delay
+    setTimeout(() => {
       try {
-        const { resetUIToInitialState } = await import('./modules/ui-manager.js');
-        resetUIToInitialState();
+        // Acessar diretamente a função
+        const uiManager = document.createElement('script');
+        uiManager.textContent = `
+          if (typeof resetUIToInitialState === 'function') {
+            resetUIToInitialState();
+          } else if (window.fleekUIManager && typeof window.fleekUIManager.resetUIToInitialState === 'function') {
+            window.fleekUIManager.resetUIToInitialState();
+          }
+        `;
+        document.head.appendChild(uiManager);
       } catch (e) {
         console.error("Erro ao garantir visibilidade da UI:", e);
       }

@@ -472,6 +472,10 @@ function hideAllButtons() {
 function resetUIToInitialState() {
   console.log("Resetando UI para estado inicial");
   
+  // Expor a função globalmente para facilitar o acesso
+  window.fleekUIManager = window.fleekUIManager || {};
+  window.fleekUIManager.resetUIToInitialState = resetUIToInitialState;
+  
   // Verificar se os elementos existem
   if (!ui.elements.loginButton || !ui.elements.logoutButton) {
     console.warn("Elementos UI não encontrados, recachear elementos");
@@ -479,8 +483,24 @@ function resetUIToInitialState() {
     
     if (!ui.elements.loginButton || !ui.elements.logoutButton) {
       console.error("Elementos UI ainda não encontrados após recache");
-      return;
+      // Buscar elementos diretamente para garantir
+      ui.elements.loginButton = document.getElementById('login-button');
+      ui.elements.logoutButton = document.getElementById('logout-button');
+      ui.elements.acessarArquivo = document.getElementById('acessar-arquivo');
+      ui.elements.cadastroMetaverso = document.getElementById('cadastro-metaverso');
+      
+      if (!ui.elements.loginButton) {
+        console.error("Botão de login não encontrado mesmo após tentativa direta");
+        return;
+      }
     }
+  }
+  
+  // Garantir que o overlay de loading esteja escondido
+  const overlay = document.getElementById('loading-overlay');
+  if (overlay) {
+    overlay.style.display = 'none';
+    overlay.classList.add('hidden');
   }
   
   // Definir estado padrão dos elementos
@@ -491,11 +511,15 @@ function resetUIToInitialState() {
   ui.elements.logoutButton.style.display = 'none';
   ui.elements.logoutButton.style.opacity = '1';
   
-  ui.elements.acessarArquivo.style.display = 'none';
-  ui.elements.acessarArquivo.style.opacity = '1';
+  if (ui.elements.acessarArquivo) {
+    ui.elements.acessarArquivo.style.display = 'none';
+    ui.elements.acessarArquivo.style.opacity = '1';
+  }
   
-  ui.elements.cadastroMetaverso.style.display = 'none';
-  ui.elements.cadastroMetaverso.style.opacity = '1';
+  if (ui.elements.cadastroMetaverso) {
+    ui.elements.cadastroMetaverso.style.display = 'none';
+    ui.elements.cadastroMetaverso.style.opacity = '1';
+  }
   
   // Garantir que o formulário de e-mail esteja visível se for o método atual
   if (ui.currentAuthMethod === 'email') {

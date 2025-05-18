@@ -256,6 +256,14 @@ async function checkUserLoggedIn() {
         console.warn("Não foi possível obter o email do usuário dos metadados");
       }
       
+      // Atualizar o estado global da aplicação
+      if (window.fleekAppState) {
+        window.fleekAppState.isLoggedIn = true;
+        window.fleekAppState.authMethod = 'email';
+        window.fleekAppState.userIdentifier = userEmail;
+        console.log("Estado global atualizado após login:", window.fleekAppState);
+      }
+      
       // Evento de restauração de sessão
       const sessionEvent = new CustomEvent('auth:sessionRestored', { 
         detail: { user: userMetadata } 

@@ -243,21 +243,14 @@ async function loadEncryptedFile(fileName, decryptionKey) {
     
     console.log(`Buscando arquivo: ${fileName}`);
     
-    // Obter método de autenticação atual de forma síncrona
+    // Usar o estado global para obter o método de autenticação atual
     let authMethod = '';
-    try {
-      // Usar o método tradicional síncrono
-      const getCurrentAuthMethodFn = await import('../app.js').then(m => m.getCurrentAuthMethod);
-      if (getCurrentAuthMethodFn) {
-        authMethod = getCurrentAuthMethodFn();
-        console.log("Método de autenticação obtido:", authMethod);
-      } else {
-        console.warn("Função getCurrentAuthMethod não encontrada, usando email como padrão");
-        authMethod = 'email';
-      }
-    } catch (error) {
-      console.warn("Erro ao importar getCurrentAuthMethod:", error);
-      authMethod = 'email'; // Fallback para email
+    if (window.fleekAppState && window.fleekAppState.authMethod) {
+      authMethod = window.fleekAppState.authMethod;
+      console.log("Método de autenticação obtido do estado global:", authMethod);
+    } else {
+      console.warn("Estado global não disponível, usando email como padrão");
+      authMethod = 'email';
     }
     
     // Obter token ou wallet baseado no método de autenticação
@@ -265,29 +258,27 @@ async function loadEncryptedFile(fileName, decryptionKey) {
     let walletAddress = null;
     
     if (authMethod === 'email') {
-      // Obter token via chamada direta para auth.js
+      // Obter token do Magic SDK diretamente
       try {
-        const authModule = await import('./auth.js');
-        if (authModule.getMagicInstance) {
-          const magic = authModule.getMagicInstance();
-          if (magic) {
-            token = await magic.user.getIdToken();
-            console.log("Token obtido com sucesso");
-          } else {
-            console.error("Instância Magic não disponível");
-          }
+        if (window.magic) {
+          token = await window.magic.user.getIdToken();
+          console.log("Token obtido com sucesso");
+        } else {
+          console.error("Instância Magic não disponível");
         }
       } catch (error) {
         console.error("Erro ao obter token:", error);
       }
     } else {
-      // Obter endereço da wallet via chamada direta
+      // Obter endereço da wallet do estado global ou do objeto window
       try {
-        const walletModule = await import('./wallet-connector.js');
-        if (walletModule.getWalletAddress) {
-          walletAddress = walletModule.getWalletAddress();
-          console.log("Endereço da wallet obtido:", walletAddress);
+        if (window.fleekAppState && window.fleekAppState.walletAddress) {
+          walletAddress = window.fleekAppState.walletAddress;
+        } else if (window.walletConnect && typeof window.walletConnect.getCurrentAccount === 'function') {
+          walletAddress = window.walletConnect.getCurrentAccount();
         }
+        
+        console.log("Endereço da wallet obtido:", walletAddress);
       } catch (error) {
         console.error("Erro ao obter endereço da wallet:", error);
       }

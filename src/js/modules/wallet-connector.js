@@ -112,6 +112,15 @@ async function handleAccountsChanged(accounts) {
     walletAddress = accounts[0];
     await updateWalletInfo();
     
+    // Atualizar estado global da aplicação
+    if (window.fleekAppState) {
+      window.fleekAppState.isLoggedIn = true;
+      window.fleekAppState.authMethod = 'wallet';
+      window.fleekAppState.walletAddress = walletAddress;
+      window.fleekAppState.userIdentifier = walletAddress;
+      console.log("Estado global atualizado após conexão de wallet:", window.fleekAppState);
+    }
+    
     if (isConnected) {
       dispatchConnectedEvent();
     }
