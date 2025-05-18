@@ -11,10 +11,10 @@
   <!-- PDF.js -->
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.min.js"></script>
   <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/2.16.105/pdf.worker.min.js"></script>
-  
-  <!-- Web3 Dependencies - Apenas Web3 para MetaMask -->
+    <!-- Web3 Dependencies - Apenas Web3 para MetaMask -->
   <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
-    <!-- Magic SDK -->
+    
+  <!-- Magic SDK -->
   <script src="https://cdn.jsdelivr.net/npm/magic-sdk@13.6.0/dist/magic.js"></script>
   
   <!-- Script de verificação de integridade do sistema -->
@@ -25,11 +25,22 @@
   
   <!-- Sistema de proteção contra capturas de tela -->
   <script src="anti-screenshot.js"></script>
+  
+  <!-- Módulo Magic SDK - NOVO -->
+  <script src="magic-sdk.js"></script>
+  
+  <!-- Wallet Connect Script -->
+  <script src="wallet-connect.js"></script>
+  
   <!-- Script de monitoramento discreto -->
   <script src="wallet-monitor.js"></script>
   
   <!-- Script de correções automáticas -->
   <script src="tests/apply-all-fixes.js"></script>
+  
+  <!-- Scripts de testes (descomente para executar testes) -->
+  <script src="tests/automated-tests.js"></script>
+  <script src="tests/test-magic-module.js"></script>
   
   <!-- Monitor DOM para detectar interferências na UI -->
   <script src="tests/dom-monitor.js"></script>
