@@ -14,15 +14,26 @@ async function initMagicSDK() {
       const data = await response.json();
       magicPubKey = data.magicPublicKey;
     } else {
-      // Chave de fallback para desenvolvimento local - substituir em produção
+      // Chave de fallback para desenvolvimento local
       console.warn("Usando chave Magic SDK de desenvolvimento");
-      magicPubKey = "pk_live_seu_magic_public_key";
+      magicPubKey = "pk_live_20134EF9B8F26232"; // Usando a chave do .env ou .env.example
+    }
+    
+    if (!magicPubKey) {
+      console.error("Chave Magic SDK não encontrada. Verificando se a biblioteca está carregada...");
+      if (typeof Magic === 'undefined') {
+        console.error("A biblioteca Magic SDK não foi carregada corretamente");
+        alert("Erro ao carregar o Magic SDK. Verifique sua conexão com a internet e tente novamente.");
+        return;
+      }
+      throw new Error("Magic SDK Public Key não disponível");
     }
     
     window.magic = new Magic(magicPubKey);
     console.log("Magic SDK inicializado com sucesso");
   } catch (error) {
     console.error("Erro ao inicializar Magic SDK:", error);
+    alert("Erro ao inicializar sistema de autenticação. Por favor, recarregue a página ou tente novamente mais tarde.");
   }
 }
 

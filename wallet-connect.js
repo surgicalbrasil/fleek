@@ -69,14 +69,15 @@ function checkMetaMaskAvailability() {
 // Função para conectar à carteira (apenas MetaMask)
 async function connectWallet() {
   try {
-    console.log("Conectando carteira (MetaMask)...");
-
-    // Verificar se o objeto Web3 está disponível
-    if (typeof Web3 === 'undefined') {
+    console.log("Conectando carteira (MetaMask)...");    // Verificar se o objeto Web3 está disponível
+    if (typeof Web3 === 'undefined' && typeof web3 === 'undefined') {
       console.error("Web3 não está disponível");
       alert("A biblioteca Web3 não está disponível. Verifique sua conexão com a internet e tente novamente.");
       throw new Error("Web3 não está disponível");
     }
+    
+    // Usar web3 disponível globalmente se Web3 (maiúsculo) não estiver disponível
+    const Web3Constructor = typeof Web3 !== 'undefined' ? Web3 : web3.constructor;
 
     // Verificar se a MetaMask está instalada
     if (!window.ethereum) {
@@ -95,10 +96,26 @@ async function connectWallet() {
       console.error("Nenhum provedor selecionado");
       throw new Error("Nenhum provedor selecionado");
     }
-    
-    // Configuração do Web3
+      // Configuração do Web3
     console.log("Configurando instância Web3...");
-    web3Instance = new Web3(provider);
+    try {
+      if (typeof Web3 !== 'undefined') {
+        web3Instance = new Web3(provider);
+      } else if (typeof web3 !== 'undefined') {
+        web3Instance = new web3.constructor(provider);
+      } else {
+        throw new Error("Web3 não está disponível");
+      }
+    } catch (error) {
+      console.error("Erro ao criar instância Web3:", error);
+      // Fallback para o objeto ethereum da MetaMask se disponível
+      if (window.ethereum) {
+        console.log("Usando o provider da MetaMask diretamente");
+        web3Instance = { eth: window.ethereum };
+      } else {
+        throw new Error("Não foi possível criar uma instância Web3");
+      }
+    }
     
     // Obter informação da rede conectada
     console.log("Obtendo informações da rede...");
