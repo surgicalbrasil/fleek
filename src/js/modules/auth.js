@@ -40,8 +40,31 @@ async function initMagicSDK() {
       throw new Error("Magic SDK Public Key não disponível");
     }
     
+    // Inicializar o Magic SDK
     magic = new Magic(magicPubKey);
     console.log("Magic SDK inicializado com sucesso");
+    
+    // Verificar a versão do Magic SDK e configurar métodos compatíveis
+    try {
+      if (magic.version) {
+        console.log("Magic SDK versão:", magic.version);
+      }
+      
+      // Verificar se os métodos necessários estão disponíveis
+      // Se magic.user.getMetadata não existir, adicionamos um polyfill
+      if (magic.user && !magic.user.getMetadata && magic.user.getInfo) {
+        console.log("Adicionando polyfill para getMetadata usando getInfo");
+        magic.user.getMetadata = async function() {
+          const info = await magic.user.getInfo();
+          return info;
+        };
+      }
+      
+      // Expor magic para debugging e testes
+      window.magic = magic;
+    } catch (e) {
+      console.log("Aviso: Configuração de compatibilidade de API falhou:", e);
+    }
     
     // Verificamos se o usuário já está logado
     await checkUserLoggedIn();
@@ -108,8 +131,21 @@ async function loginWithEmail(email) {
       throw new Error("Falha ao gerar token de autenticação");
     }
     
-    userEmail = email;
-    userMetadata = await magic.user.getMetadata();
+    userEmail = email;    // A versão mais recente do Magic SDK usa getUserInfo em vez de getMetadata
+    try {
+      userMetadata = await magic.user.getInfo();
+    } catch (metadataError) {
+      // Fallback para API legada se necessário
+      console.warn("Erro ao usar getInfo, tentando método alternativo:", metadataError);
+      try {
+        userMetadata = await magic.user.getMetadata();
+      } catch (fallbackError) {
+        console.error("Não foi possível obter os metadados do usuário:", fallbackError);
+        // Criar metadados mínimos
+        userMetadata = { email };
+      }
+    }
+    
     isLoggedIn = true;
     
     // Evento de login bem-sucedido
@@ -118,12 +154,25 @@ async function loginWithEmail(email) {
     });
     window.dispatchEvent(loginEvent);
     
-    return true;
-  } catch (error) {
+    return true;  } catch (error) {
     console.error("Erro ao fazer login com email:", error);
+    
+    // Fornecer mensagens de erro mais específicas para facilitar a depuração
+    let errorMessage = error.message;
+    if (error.message.includes("getMetadata is not a function")) {
+      errorMessage = "Incompatibilidade na versão do Magic SDK. Contate o suporte técnico.";
+    } else if (error.message.includes("magic.auth")) {
+      errorMessage = "Erro na inicialização do serviço de autenticação. Tente novamente mais tarde.";
+    }
+    
     // Evento de falha de login
     const loginFailEvent = new CustomEvent('auth:loginFailed', { 
-      detail: { method: 'email', error: error.message } 
+      detail: { 
+        method: 'email', 
+        error: errorMessage,
+        originalError: error.message,
+        stack: error.stack
+      } 
     });
     window.dispatchEvent(loginFailEvent);
     return false;
@@ -165,12 +214,32 @@ async function checkUserLoggedIn() {
     if (!magic) {
       await initMagicSDK();
     }
-    
-    isLoggedIn = await magic.user.isLoggedIn();
+      isLoggedIn = await magic.user.isLoggedIn();
     
     if (isLoggedIn) {
-      userMetadata = await magic.user.getMetadata();
-      userEmail = userMetadata.email;
+      // A versão mais recente do Magic SDK usa getUserInfo em vez de getMetadata
+      try {
+        userMetadata = await magic.user.getInfo();
+      } catch (metadataError) {
+        // Fallback para API legada se necessário
+        console.warn("Erro ao usar getInfo, tentando método alternativo:", metadataError);
+        try {
+          userMetadata = await magic.user.getMetadata();
+        } catch (fallbackError) {
+          console.error("Não foi possível obter os metadados do usuário:", fallbackError);
+          // Criar metadados mínimos
+          userMetadata = { email: "user@example.com" }; // Será substituído quando o email for identificado
+        }
+      }
+      
+      // Obter email do usuário (diferentes versões do Magic SDK podem ter estruturas diferentes)
+      if (userMetadata && userMetadata.email) {
+        userEmail = userMetadata.email;
+      } else if (userMetadata && userMetadata.data && userMetadata.data.email) {
+        userEmail = userMetadata.data.email;
+      } else {
+        console.warn("Não foi possível obter o email do usuário dos metadados");
+      }
       
       // Evento de restauração de sessão
       const sessionEvent = new CustomEvent('auth:sessionRestored', { 
@@ -191,6 +260,10 @@ async function checkUserLoggedIn() {
  * @returns {Object|null}
  */
 function getMagicInstance() {
+  // Expor a instância do Magic SDK para testes também
+  if (magic) {
+    window.magic = magic;
+  }
   return magic;
 }
 
