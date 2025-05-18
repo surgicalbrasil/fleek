@@ -243,32 +243,54 @@ async function loadEncryptedFile(fileName, decryptionKey) {
     
     console.log(`Buscando arquivo: ${fileName}`);
     
-    // Obter método de autenticação atual e dados de autenticação
-    const authMethodEvent = new CustomEvent('auth:getAuthMethod', {
-      detail: { callback: (method) => {} }
-    });
-    
+    // Obter método de autenticação atual de forma síncrona
     let authMethod = '';
-    authMethodEvent.detail.callback = (method) => {
-      authMethod = method;
-    };
-    window.dispatchEvent(authMethodEvent);
+    try {
+      // Usar o método tradicional síncrono
+      const getCurrentAuthMethodFn = await import('../app.js').then(m => m.getCurrentAuthMethod);
+      if (getCurrentAuthMethodFn) {
+        authMethod = getCurrentAuthMethodFn();
+        console.log("Método de autenticação obtido:", authMethod);
+      } else {
+        console.warn("Função getCurrentAuthMethod não encontrada, usando email como padrão");
+        authMethod = 'email';
+      }
+    } catch (error) {
+      console.warn("Erro ao importar getCurrentAuthMethod:", error);
+      authMethod = 'email'; // Fallback para email
+    }
     
     // Obter token ou wallet baseado no método de autenticação
     let token = null;
     let walletAddress = null;
     
     if (authMethod === 'email') {
-      const tokenEvent = new CustomEvent('auth:getToken', {
-        detail: { callback: (t) => { token = t; } }
-      });
-      window.dispatchEvent(tokenEvent);
+      // Obter token via chamada direta para auth.js
+      try {
+        const authModule = await import('./auth.js');
+        if (authModule.getMagicInstance) {
+          const magic = authModule.getMagicInstance();
+          if (magic) {
+            token = await magic.user.getIdToken();
+            console.log("Token obtido com sucesso");
+          } else {
+            console.error("Instância Magic não disponível");
+          }
+        }
+      } catch (error) {
+        console.error("Erro ao obter token:", error);
+      }
     } else {
-      // Obter endereço da wallet
-      const walletEvent = new CustomEvent('wallet:getAddress', {
-        detail: { callback: (addr) => { walletAddress = addr; } }
-      });
-      window.dispatchEvent(walletEvent);
+      // Obter endereço da wallet via chamada direta
+      try {
+        const walletModule = await import('./wallet-connector.js');
+        if (walletModule.getWalletAddress) {
+          walletAddress = walletModule.getWalletAddress();
+          console.log("Endereço da wallet obtido:", walletAddress);
+        }
+      } catch (error) {
+        console.error("Erro ao obter endereço da wallet:", error);
+      }
     }
     
     // Configuração do request

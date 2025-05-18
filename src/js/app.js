@@ -13,6 +13,13 @@ import { logAction } from './utils/utils.js';
 // Variáveis globais da aplicação
 let appInitialized = false;
 
+// Estado global da aplicação para compartilhar entre módulos
+window.fleekAppState = {
+  authMethod: 'email',
+  isLoggedIn: false,
+  userIdentifier: null
+};
+
 /**
  * Inicializa a aplicação
  * @returns {Promise<void>}
@@ -309,7 +316,16 @@ document.addEventListener('DOMContentLoaded', () => {
     });
 });
 
+// Wrapper para obter o método de autenticação atual
+function getCurrentAuthMethod() {
+  // Importar diretamente do módulo ui-manager
+  const method = window.fleekAppState ? window.fleekAppState.authMethod : 'email';
+  console.log("App: Método de autenticação atual:", method);
+  return method;
+}
+
 // Exportar funções do módulo
 export {
-  initApp
+  initApp,
+  getCurrentAuthMethod
 };

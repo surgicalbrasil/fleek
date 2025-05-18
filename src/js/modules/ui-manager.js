@@ -107,8 +107,13 @@ function setupAuthToggle() {
   ui.elements.authToggles.forEach(button => {
     button.addEventListener('click', () => {
       ui.elements.authToggles.forEach(btn => btn.classList.remove('active'));
-      button.classList.add('active');
-      ui.currentAuthMethod = button.dataset.auth;
+      button.classList.add('active');      ui.currentAuthMethod = button.dataset.auth;
+      
+      // Atualizar o estado global da aplicação
+      if (window.fleekAppState) {
+        window.fleekAppState.authMethod = ui.currentAuthMethod;
+        console.log("Estado global atualizado - método de autenticação:", ui.currentAuthMethod);
+      }
       
       // Mostrar/esconder formulário de email conforme o método
       ui.elements.emailForm.style.display = ui.currentAuthMethod === 'email' ? 'block' : 'none';
