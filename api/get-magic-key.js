@@ -31,10 +31,8 @@ export default async function handler(req, res) {
   
   // Buscar a Magic Public Key das variáveis de ambiente
   const magicPublicKey = process.env.MAGIC_PUBLIC_KEY;
-  
-  // Verificar se a chave existe
   if (!magicPublicKey) {
-    return res.status(500).json({ error: 'Configuração do servidor ausente' });
+    throw new Error('MAGIC_PUBLIC_KEY is not defined in environment variables.');
   }
   
   // Retorna apenas a chave pública

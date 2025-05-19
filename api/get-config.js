@@ -20,12 +20,11 @@ export default function handler(req, res) {
   
   // Buscar a API key das variáveis de ambiente
   const apiKey = process.env.API_KEY;
-  
-  // Verificar se a API key existe
   if (!apiKey) {
-    return res.status(500).json({ error: 'Configuração do servidor ausente' });
+    throw new Error('API_KEY is not defined in environment variables.');
   }
-    // Retorna dados de configuração sem expor a API key diretamente
+  
+  // Retorna dados de configuração sem expor a API key diretamente
   res.status(200).json({
     provider: 'metamask',
     timestamp: new Date().toISOString(),
