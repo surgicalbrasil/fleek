@@ -44,3 +44,19 @@ Para executar o projeto localmente:
 1. Clone o repositório
 2. Abra o arquivo `index.html` no navegador
 3. Para testar a conexão de carteira, utilize o arquivo de teste em `tests/wallet-tests.js`
+
+## Atualizações Recentes
+
+### Modos de Inicialização
+- **Modo `dev`**: Inicia o ambiente de desenvolvimento, configurando dependências e inicializando o backend.
+- **Modo `local`**: Configura o ambiente local, cria o arquivo `.env` automaticamente (se necessário), instala dependências e inicia o servidor local com o Vercel CLI configurado automaticamente.
+- **Modo `modular`**: Verifica dependências como Node.js e `http-server`, e inicia o servidor modular na porta 8080.
+
+### Scripts Atualizados
+- `start-dev.bat`: Consolidado para suportar os modos `dev`, `local` e `modular`.
+- `configure-env.bat`: Agora cria um arquivo `.env` padrão se `.env.example` não estiver presente.
+- `commit-modular-structure.ps1`: Inclui verificações antes de realizar commit e push.
+
+### Melhorias Gerais
+- Scripts redundantes foram removidos.
+- Modularização aplicada para reutilização de lógica em vários scripts.

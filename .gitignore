@@ -48,6 +48,4 @@ debug.js
 *.ps1
 ersbeelinkDesktopfleek*
 .vercel
-
-# Ignore problematic file
-"ao_funcional_base -- ."
+ao_funcional_base -- .

@@ -25,11 +25,7 @@ export default async function handler(req, res) {
   }
 
   try {
-    if (!process.env.GOOGLE_SHEETS_CREDENTIALS) {
-      throw new Error('GOOGLE_SHEETS_CREDENTIALS is not defined in environment variables.');
-    }
     const credentials = JSON.parse(Buffer.from(process.env.GOOGLE_SHEETS_CREDENTIALS, 'base64').toString('utf-8'));
-
     const client = new google.auth.JWT(
       credentials.client_email,
       null,
@@ -41,13 +37,7 @@ export default async function handler(req, res) {
 
     const sheets = google.sheets({ version: 'v4', auth: client });
     const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-    if (!spreadsheetId) {
-      throw new Error('GOOGLE_SHEETS_SPREADSHEET_ID is not defined in environment variables.');
-    }
     const range = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!A:A";
-    if (!range) {
-      throw new Error('GOOGLE_SHEETS_RANGE is not defined in environment variables.');
-    }
 
     const responseSheet = await sheets.spreadsheets.values.get({ spreadsheetId, range });
     const rows = responseSheet.data.values;

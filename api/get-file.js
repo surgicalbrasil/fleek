@@ -46,9 +46,6 @@ export default async function handler(req, res) {
       
       // Magic SDK: Validação do token
       const magic = new Magic(process.env.MAGIC_SECRET_KEY);
-      if (!process.env.MAGIC_SECRET_KEY) {
-        throw new Error('MAGIC_SECRET_KEY is not defined in environment variables.');
-      }
       const metadata = await magic.users.getMetadataByToken(token);
 
       if (!metadata || !metadata.email) {
@@ -70,9 +67,6 @@ export default async function handler(req, res) {
 
     // Google Sheets: Configuração e leitura dos e-mails autorizados
     const credentials = JSON.parse(Buffer.from(process.env.GOOGLE_SHEETS_CREDENTIALS, 'base64').toString('utf-8'));
-    if (!process.env.GOOGLE_SHEETS_CREDENTIALS) {
-      throw new Error('GOOGLE_SHEETS_CREDENTIALS is not defined in environment variables.');
-    }
     const client = new google.auth.JWT(
       credentials.client_email,
       null,
@@ -83,16 +77,10 @@ export default async function handler(req, res) {
     await client.authorize();
 
     const sheets = google.sheets({ version: 'v4', auth: client });    const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-    if (!spreadsheetId) {
-      throw new Error('GOOGLE_SHEETS_SPREADSHEET_ID is not defined in environment variables.');
-    }
-    const emailRange = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!A:A";
-    if (!emailRange) {
-      throw new Error('GOOGLE_SHEETS_RANGE is not defined in environment variables.');
-    }
     
     // Verificar autorização baseado no tipo de autenticação
     if (authType === 'email') {
+      const emailRange = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!A:A";
       const emailSheet = await sheets.spreadsheets.values.get({ 
         spreadsheetId, 
         range: emailRange 
@@ -127,17 +115,9 @@ export default async function handler(req, res) {
     }    // Buscar e descriptografar o arquivo - usando apenas a URL das variáveis de ambiente
     const encryptedFileUrl = process.env.ENCRYPTED_FILE_URL;
     if (!encryptedFileUrl) {
-      throw new Error('ENCRYPTED_FILE_URL is not defined in environment variables.');
+      return res.status(500).json({ success: false, error: "URL do arquivo não configurada no servidor." });
     }
-    const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
-    if (!process.env.ENCRYPTION_KEY) {
-      throw new Error('ENCRYPTION_KEY is not defined in environment variables.');
-    }
-    const IV = Buffer.from(process.env.ENCRYPTION_IV, "hex");
-    if (!process.env.ENCRYPTION_IV) {
-      throw new Error('ENCRYPTION_IV is not defined in environment variables.');
-    }
-
+    
     const response = await fetch(encryptedFileUrl);
 
     if (!response.ok) {
@@ -145,6 +125,8 @@ export default async function handler(req, res) {
     }
 
     const encryptedData = await response.buffer();
+    const ENCRYPTION_KEY = Buffer.from(process.env.ENCRYPTION_KEY, "hex");
+    const IV = Buffer.from(process.env.ENCRYPTION_IV, "hex");
     const decipher = crypto.createDecipheriv("aes-256-cbc", ENCRYPTION_KEY, IV);
     const decryptedData = Buffer.concat([decipher.update(encryptedData), decipher.final()]);
 

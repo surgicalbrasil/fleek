@@ -54,103 +54,18 @@ Sistema para visualização de documentos confidenciais com autenticação segur
 
 Consulte o guia de solução de problemas em `docs/TROUBLESHOOTING.md`.
 
-## Estrutura do Projeto Final
+## Estrutura do Projeto
 
 ```
 fleek/
 ├── api/                  # Backend (serverless functions)
-│   ├── get-authorized-emails.js
-│   ├── get-authorized-wallets.js
-│   ├── get-config.js
-│   ├── get-file.js
-│   ├── get-magic-key.js
-│   └── package.json
-├── config/               # Arquivos de configuração (.env)
+│   ├── get-file.js       # Endpoint para obter documentos
+│   └── ...
 ├── docs/                 # Documentação
-│   ├── IMPLEMENTATION_NOTES.md
-│   ├── README.md
-│   ├── SECURITY_GUIDE.md
-│   ├── TESTING_GUIDE.md
-│   └── TROUBLESHOOTING.md
-├── files/                # Arquivos criptografados
-│   └── Paper.encrypted
-├── public/               # Arquivos estáticos (CSS, JS, HTML)
-│   ├── anti-screenshot.css
-│   ├── anti-screenshot.js
-│   ├── index.html
-│   ├── magic-sdk.js
-│   ├── script.js
-│   ├── styles.css
-│   ├── wallet-connect.js
-│   └── wallet-monitor.js
-├── scripts/              # Scripts automatizados
-│   ├── backups/          # Scripts de backup e rollback
-│   │   ├── return-to-working-version.ps1
-│   │   ├── rollback-to-working-version.bat
-│   │   ├── rollback.ps1
-│   │   └── simple-rollback.ps1
-│   ├── commits/          # Scripts relacionados a commits
-│   │   ├── checkout-commit.ps1
-│   │   ├── commit-and-push.bat
-│   │   ├── commit-login-fixes.ps1
-│   │   ├── commit-magic-fix.bat
-│   │   ├── commit-magic-simple.ps1
-│   │   ├── commit-modular-structure.ps1
-│   │   ├── commit-push-simple.bat
-│   │   └── reset-to-previous-commit.ps1
-│   ├── migrations/       # Scripts de migração
-│   │   ├── migrate-to-modules.bat
-│   │   ├── run-migration.bat
-│   │   └── run-migration.ps1
-│   ├── setup/            # Scripts de configuração
-│   │   ├── configure-env.bat
-│   │   ├── configure-env.ps1
-│   │   ├── restore-config.bat
-│   │   └── setup-github.bat
-│   └── tools/            # Scripts utilitários
-│       ├── check-dependencies.bat
-│       ├── final-check.bat
-│       ├── fix-magic-sdk.ps1
-│       ├── fix-missing-icons.js
-│       ├── push-changes.ps1
-│       ├── quick-start.bat
-│       ├── run-npm.bat
-│       ├── run-npm.ps1
-│       ├── start-complete-with-tests.bat
-│       ├── start-dev-complete.bat
-│       ├── start-dev.bat
-│       ├── start-dev.ps1
-│       ├── start-enhanced.bat
-│       ├── start-enhanced.ps1
-│       ├── start-local-dev.bat
-│       ├── start-local-dev.ps1
-│       ├── start-modular.bat
-│       ├── start.bat
-│       └── verify-modules.bat
 ├── tests/                # Scripts de teste
-│   ├── analyze-changes.html
-│   ├── apply-all-fixes.js
-│   ├── automated-tests.js
-│   ├── button-alert-test.html
-│   ├── button-fix-test.html
-│   ├── button-fix-verification.js
-│   ├── button-test.html
-│   ├── code-analyzer.js
-│   ├── comprehensive-test.html
-│   ├── comprehensive-test.js
-│   ├── dom-monitor.js
-│   ├── event-debugger.js
-│   ├── final-verification.js
-│   ├── loading-test.html
-│   ├── loading-test.js
-│   ├── magic-sdk-module-page.html
-│   ├── magic-sdk-test.html
-│   ├── script-validacao.js
-│   ├── test-all-buttons.js
-│   ├── test-modules.html
-│   ├── test-modules.js
-│   ├── verification-page.html
-│   ├── verify-all-fixes.js
-│   └── wallet-tests.js
-└── README.md             # Documentação principal
+├── files/                # Arquivos criptografados
+├── index.html            # Interface principal
+├── script.js             # Lógica principal do frontend
+├── wallet-connect.js     # Conexão com carteiras Web3
+└── styles.css            # Estilos da aplicação
 ```
