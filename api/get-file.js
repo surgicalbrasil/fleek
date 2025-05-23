@@ -80,7 +80,7 @@ export default async function handler(req, res) {
     
     // Verificar autorização baseado no tipo de autenticação
     if (authType === 'email') {
-      const emailRange = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!A:A";
+      const emailRange = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!C:C";
       const emailSheet = await sheets.spreadsheets.values.get({ 
         spreadsheetId, 
         range: emailRange 
@@ -97,7 +97,7 @@ export default async function handler(req, res) {
       }
     } 
     else if (authType === 'wallet') {
-      const walletRange = "Sheet1!B:B"; // Consultando a coluna B para wallets
+      const walletRange = "Sheet1!D:D"; // Consultando a coluna D para wallets
       const walletSheet = await sheets.spreadsheets.values.get({ 
         spreadsheetId, 
         range: walletRange 
