@@ -33,20 +33,32 @@ export default async function handler(req, res) {
       ['https://www.googleapis.com/auth/spreadsheets.readonly']
     );
 
-    await client.authorize();
-
+    await client.authorize();    
     const sheets = google.sheets({ version: 'v4', auth: client });
     const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-    const range = "Sheet1!D:D"; // Consultando a coluna B para wallets
-
-    const responseSheet = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-    const rows = responseSheet.data.values;
-
-    if (!rows || rows.length === 0) {
+    
+    // Buscando dados de toda a planilha para ter mais flexibilidade
+    const sheetRange = "Sheet1!A1:Z1000"; // Range amplo para obter mais dados da planilha
+    const responseSheet = await sheets.spreadsheets.values.get({ 
+      spreadsheetId, 
+      range: sheetRange 
+    });
+    
+    const allRows = responseSheet.data.values;
+    if (!allRows || allRows.length === 0) {
       return res.status(500).json({ success: false, error: "Nenhum dado encontrado na planilha." });
     }
-
-    const authorizedWallets = rows.map(row => row[0].toLowerCase()); // Convertendo para lowercase para comparação case-insensitive
+    
+    console.log("Amostra de linhas da planilha:", JSON.stringify(allRows.slice(0, 3)));
+    
+    // Verificando se a wallet está na coluna D (índice 3)
+    const authorizedWallets = allRows
+      .filter(row => row && row.length > 3 && row[3])  // Certificar que existe coluna D (índice 3)
+      .map(row => row[3].toLowerCase())                // Pegar valor da coluna D e normalizar
+      .filter(wallet => wallet && wallet.trim() !== ''); // Remover valores vazios
+    
+    console.log("Wallets autorizadas (amostra):", authorizedWallets.slice(0, 5));
+    
     return res.status(200).json({ success: true, wallets: authorizedWallets });
   } catch (err) {
     console.error("Erro ao buscar wallets autorizadas:", err);

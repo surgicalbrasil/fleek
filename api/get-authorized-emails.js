@@ -37,16 +37,29 @@ export default async function handler(req, res) {
 
     const sheets = google.sheets({ version: 'v4', auth: client });
     const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-    const range = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!C:C";
-
-    const responseSheet = await sheets.spreadsheets.values.get({ spreadsheetId, range });
-    const rows = responseSheet.data.values;
-
-    if (!rows || rows.length === 0) {
+    
+    // Buscando dados de toda a planilha para ter mais flexibilidade
+    const sheetRange = "Sheet1!A1:Z1000"; // Range amplo para obter mais dados da planilha
+    const responseSheet = await sheets.spreadsheets.values.get({ 
+      spreadsheetId, 
+      range: sheetRange 
+    });
+    
+    const allRows = responseSheet.data.values;
+    if (!allRows || allRows.length === 0) {
       return res.status(500).json({ success: false, error: "Nenhum dado encontrado na planilha." });
     }
-
-    const authorizedEmails = rows.map(row => row[0].toLowerCase());
+    
+    console.log("Amostra de linhas da planilha:", JSON.stringify(allRows.slice(0, 3)));
+    
+    // Verificando se o email está na coluna C (índice 2)
+    const authorizedEmails = allRows
+      .filter(row => row && row.length > 2 && row[2])  // Certificar que existe coluna C (índice 2)
+      .map(row => row[2].toLowerCase())                // Pegar valor da coluna C e normalizar
+      .filter(email => email && email.trim() !== '');  // Remover valores vazios
+    
+    console.log("Emails autorizados (amostra):", authorizedEmails.slice(0, 5));
+    
     return res.status(200).json({ success: true, emails: authorizedEmails });
   } catch (err) {
     console.error("Erro ao buscar e-mails autorizados:", err);

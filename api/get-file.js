@@ -77,39 +77,59 @@ export default async function handler(req, res) {
     await client.authorize();
 
     const sheets = google.sheets({ version: 'v4', auth: client });    const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-    
-    // Verificar autorização baseado no tipo de autenticação
+      // Verificar autorização baseado no tipo de autenticação
     if (authType === 'email') {
-      const emailRange = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!C:C";
-      const emailSheet = await sheets.spreadsheets.values.get({ 
+      // Buscando dados de toda a planilha para ter mais flexibilidade
+      const sheetRange = "Sheet1!A1:Z1000"; // Range amplo para obter mais dados da planilha
+      const sheet = await sheets.spreadsheets.values.get({ 
         spreadsheetId, 
-        range: emailRange 
+        range: sheetRange 
       });
       
-      const emailRows = emailSheet.data.values;
-      if (!emailRows || emailRows.length === 0) {
-        return res.status(500).json({ success: false, error: "Nenhum dado encontrado na planilha de emails." });
+      const allRows = sheet.data.values;
+      if (!allRows || allRows.length === 0) {
+        return res.status(500).json({ success: false, error: "Nenhum dado encontrado na planilha." });
       }
-
-      const authorizedEmailsFromSheet = emailRows.map(row => row[0].toLowerCase());
-      if (!authorizedEmailsFromSheet.includes(userEmail)) {
+      
+      console.log("Amostra de linhas da planilha:", JSON.stringify(allRows.slice(0, 3)));
+      console.log("Email do usuário:", userEmail);
+      
+      // Verificando se o email está na coluna C (índice 2)
+      const authorizedEmails = allRows
+        .filter(row => row && row.length > 2 && row[2])  // Certificar que existe coluna C (índice 2)
+        .map(row => row[2].toLowerCase())                // Pegar valor da coluna C e normalizar
+        .filter(email => email && email.trim() !== '');  // Remover valores vazios
+      
+      console.log("Emails autorizados (amostra):", authorizedEmails.slice(0, 5));
+      
+      if (!authorizedEmails.includes(userEmail)) {
         return res.status(403).json({ success: false, error: "Email não autorizado." });
       }
-    } 
-    else if (authType === 'wallet') {
-      const walletRange = "Sheet1!D:D"; // Consultando a coluna D para wallets
-      const walletSheet = await sheets.spreadsheets.values.get({ 
+    }    else if (authType === 'wallet') {
+      // Usando os mesmos dados da planilha completa para wallets também
+      const sheetRange = "Sheet1!A1:Z1000"; // Range amplo para obter mais dados da planilha
+      const sheet = await sheets.spreadsheets.values.get({ 
         spreadsheetId, 
-        range: walletRange 
+        range: sheetRange 
       });
       
-      const walletRows = walletSheet.data.values;
-      if (!walletRows || walletRows.length === 0) {
-        return res.status(500).json({ success: false, error: "Nenhum dado encontrado na planilha de carteiras." });
+      const allRows = sheet.data.values;
+      if (!allRows || allRows.length === 0) {
+        return res.status(500).json({ success: false, error: "Nenhum dado encontrado na planilha." });
       }
-
-      const authorizedWalletsFromSheet = walletRows.map(row => row[0].toLowerCase());
-      if (!authorizedWalletsFromSheet.includes(userWallet)) {
+      
+      console.log("Amostra de linhas da planilha (para wallets):", JSON.stringify(allRows.slice(0, 3)));
+      console.log("Wallet do usuário:", userWallet);
+      
+      // Verificando se a wallet está na coluna D (índice 3)
+      const authorizedWallets = allRows
+        .filter(row => row && row.length > 3 && row[3])  // Certificar que existe coluna D (índice 3)
+        .map(row => row[3].toLowerCase())                // Pegar valor da coluna D e normalizar
+        .filter(wallet => wallet && wallet.trim() !== ''); // Remover valores vazios
+      
+      console.log("Wallets autorizadas (amostra):", authorizedWallets.slice(0, 5));
+      
+      if (!authorizedWallets.includes(userWallet)) {
         return res.status(403).json({ success: false, error: "Carteira não autorizada." });
       }
     }    // Buscar e descriptografar o arquivo - usando apenas a URL das variáveis de ambiente
