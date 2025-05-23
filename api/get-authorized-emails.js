@@ -37,7 +37,7 @@ export default async function handler(req, res) {
 
     const sheets = google.sheets({ version: 'v4', auth: client });
     const spreadsheetId = process.env.GOOGLE_SHEETS_SPREADSHEET_ID;
-    const range = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!A:A";
+    const range = process.env.GOOGLE_SHEETS_RANGE || "Sheet1!C:C";
 
     const responseSheet = await sheets.spreadsheets.values.get({ spreadsheetId, range });
     const rows = responseSheet.data.values;
